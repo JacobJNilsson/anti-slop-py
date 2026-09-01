@@ -1,9 +1,9 @@
 # antislop
 
 Evidence rules for Python. The linter targets the moves AI code
-generators make when they do not know an invariant: silent except
-handlers, casts without a stated reason, `Any` where a domain type
-exists, and guards against the type system.
+generators make when they do not know an invariant. It finds silent
+except handlers, casts without a stated reason, `Any` where a domain
+type exists, and guards against the type system.
 
 Sibling of [anti-slop-go](https://github.com/JacobJNilsson/anti-slop-go).
 The rule catalogue and the philosophy live in

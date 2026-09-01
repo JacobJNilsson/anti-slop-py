@@ -4,15 +4,15 @@ A declaration that annotates a known value Any or object throws the
 evidence away at the declaration. The author deletes the annotation and
 keeps the inferred type, or names the concrete type.
 
-Phase 1 reads the initializers whose type is evident from the syntax: a
-literal, a list, dict, set, or tuple display, an f-string, and a call of
-a name that starts with a capital letter, which is the constructor
-convention. A None or an Ellipsis initializer states no value, so the
-rule skips it. A lower case call is opaque until the type bridge of
-phase 2 arrives. A module level alias of Any is no loophole, but a
-cross module alias is out of scope for phase 1. A comment above the
-statement justifies one declaration. See docs/spec/001-overview.md,
-rule P14.
+Phase 1 reads the initializers whose type is evident from the syntax.
+These are a literal, a display of a list, dict, set, or tuple, and an
+f-string. A call of a name with a capital first letter is also evident,
+because that is the constructor convention. A None or an Ellipsis
+initializer states no value, so the rule skips it. A lower case call is
+opaque until the type bridge of phase 2 arrives. A module level alias
+of Any is no loophole, but a cross module alias is out of scope for
+phase 1. A comment above the statement justifies one declaration.
+See docs/spec/001-overview.md, rule P14.
 """
 
 from __future__ import annotations
