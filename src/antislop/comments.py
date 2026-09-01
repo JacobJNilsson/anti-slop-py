@@ -5,6 +5,12 @@ A comment that owns its line, directly above a flagged statement,
 justifies it. A comment beside code justifies the code beside it,
 never the line below. This module is the one place that parses
 comments. Rules must not re-implement it.
+
+A noqa tag holds for the whole logical line, as flake8 and ruff read
+it. A signature over four physical lines is one logical line, so a tag
+on the def line suppresses a report on the annotation below. The
+module builds the map of physical lines to logical lines from the
+NEWLINE tokens, because a NEWLINE ends a logical line.
 """
 
 from __future__ import annotations
@@ -14,6 +20,16 @@ import re
 import tokenize
 from dataclasses import dataclass, field
 
+_IGNORED = frozenset(
+    {
+        tokenize.COMMENT,
+        tokenize.NL,
+        tokenize.INDENT,
+        tokenize.DEDENT,
+        tokenize.ENCODING,
+        tokenize.ENDMARKER,
+    }
+)
 _NOQA = re.compile(
     r"#\s*noqa(?::\s*(?P<codes>[A-Z]+[0-9]+(?:[,\s]+[A-Z]+[0-9]+)*))?",
     re.IGNORECASE,
@@ -28,13 +44,23 @@ class CommentIndex:
     # The noqa field maps a line to the codes it suppresses. An empty
     # set is a blanket suppression and covers every code on that line.
     noqa: dict[int, frozenset[str]] = field(default_factory=dict)
+    # The logical field maps a physical line to every physical line of
+    # the same logical line.
+    logical: dict[int, frozenset[int]] = field(default_factory=dict)
 
     def justified(self, lines: set[int]) -> bool:
         """Report whether an own-line comment ends directly above one of lines."""
         return any(line - 1 in self.own_line for line in lines)
 
     def suppressed(self, line: int, code: str) -> bool:
-        codes = self.noqa.get(line)
+        """Report whether a noqa tag of this logical line covers one code."""
+        return any(
+            self._tagged(row, code)
+            for row in self.logical.get(line, frozenset({line}))
+        )
+
+    def _tagged(self, row: int, code: str) -> bool:
+        codes = self.noqa.get(row)
         if codes is None:
             return False
         return not codes or code.upper() in codes
@@ -66,4 +92,28 @@ def index_comments(source: str) -> CommentIndex:
             codes = match.group("codes")
             listed = re.split(r"[,\s]+", codes.upper()) if codes else []
             noqa[row] = frozenset(listed)
-    return CommentIndex(own_line=frozenset(own_line), noqa=noqa)
+    return CommentIndex(
+        own_line=frozenset(own_line), noqa=noqa, logical=_logical_lines(tokens)
+    )
+
+
+def _logical_lines(tokens: list[tokenize.TokenInfo]) -> dict[int, frozenset[int]]:
+    """Map each physical line of code to the lines of its logical line.
+
+    A NEWLINE token ends a logical line. A comment token and an NL
+    token carry no code, so neither one opens a logical line. A line
+    that holds only a comment therefore stands alone, and a tag there
+    suppresses nothing below it.
+    """
+    found: dict[int, frozenset[int]] = {}
+    rows: set[int] = set()
+    for token in tokens:
+        if token.type in _IGNORED:
+            continue
+        rows.update(range(token.start[0], token.end[0] + 1))
+        if token.type != tokenize.NEWLINE:
+            continue
+        group = frozenset(rows)
+        found.update(dict.fromkeys(group, group))
+        rows.clear()
+    return found

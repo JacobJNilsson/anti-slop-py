@@ -82,3 +82,26 @@ def test_noqa_after_other_text_suppresses() -> None:
             pass
     """
     assert run(source, "justifyswallow") == []
+
+
+def test_noqa_on_the_first_line_of_a_signature_suppresses() -> None:
+    source = """
+    from typing import Any
+
+    def load(  # noqa: AS102
+        payload: dict[str, Any],
+    ) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == []
+
+
+def test_noqa_on_a_neighbouring_logical_line_keeps_the_report() -> None:
+    source = """
+    from typing import Any
+
+    value = 1  # noqa: AS102
+    def load(payload: dict[str, Any]) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == ["5:AS102"]
