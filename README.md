@@ -21,7 +21,9 @@ A finding names a file, a line, a rule code, and the fix:
 src/app.py:41:8: AS110 justifyswallow: the except handler discards the error. ...
 ```
 
-Configure rules in `pyproject.toml` under `[tool.antislop]`.
+Configure rules in `pyproject.toml` under `[tool.antislop]`. The
+command reads the configuration from the first path of the call only,
+so one call covers one project.
 
 ### pre-commit
 

@@ -37,9 +37,15 @@ select = ["E", "F", "W", "B", "I", "UP", "RET", "SIM", "PGH"]
 # The linter runs on itself with the default rule set.
 
 [tool.antislop.noadhocisinstance]
-# A rule and the annotation reader decode the AST, so they dispatch on
-# the node types of that format at their boundary.
-boundary-modules = ["*antislop/rules/*", "*antislop/annotations.py"]
+# Each module below decodes the AST, so it dispatches on the node
+# types of that format at its boundary. The list names the modules
+# that do it, because a rule module is not a boundary by itself.
+boundary-modules = [
+    "*antislop/annotations.py",
+    "*antislop/rules/errsemantics.py",
+    "*antislop/rules/justifyexit.py",
+    "*antislop/rules/nountypeddict.py",
+]
 
 [tool.antislop.nountypeddict]
 # The engine carries the raw settings of pyproject.toml, so it decodes

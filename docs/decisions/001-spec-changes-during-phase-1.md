@@ -18,3 +18,6 @@ each, so a reader knows why the spec moved after the review.
   alone cannot tell which attributes a foreign type declares.
 - **P03 exempts the forwarding pair.** The decorator idiom hands
   `*args` and `**kwargs` to one callee together.
+- **The phase list names all thirteen phase 1 rules.** The list still
+  named eleven rules after P03 and P14 joined the catalogue, so it
+  disagreed with the catalogue that it summarises.

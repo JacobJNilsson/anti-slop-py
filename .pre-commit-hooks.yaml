@@ -3,3 +3,4 @@
   entry: antislop
   language: python
   types: [python]
+  files: "\\.py$"

@@ -7,7 +7,10 @@ The [tool.antislop] table holds two lists and per-rule tables:
     disable = ["justifyswallow"]
 
     [tool.antislop.noreflection]
-    boundary-modules = ["myapp.codec.*"]
+    boundary-modules = ["*/myapp/codec/*.py"]
+
+The boundary-modules setting holds path globs, not dotted module
+names. A pattern matches the path of a file. See antislop/boundary.py.
 """
 
 from __future__ import annotations
