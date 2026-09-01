@@ -1,0 +1,53 @@
+[project]
+name = "antislop"
+version = "0.1.0"
+description = "Evidence rules for Python. A linter for the patterns AI agents produce when they do not know an invariant."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = []
+
+[project.scripts]
+antislop = "antislop.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/antislop"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I", "UP", "RET", "SIM", "PGH"]
+
+[tool.antislop]
+# The linter runs on itself with the default rule set.
+
+[tool.antislop.noadhocisinstance]
+# Each module below decodes the AST, so it dispatches on the node
+# types of that format at its boundary. The list names the modules
+# that do it, because a rule module is not a boundary by itself.
+boundary-modules = [
+    "*antislop/annotations.py",
+    "*antislop/rules/errsemantics.py",
+    "*antislop/rules/justifyexit.py",
+    "*antislop/rules/nountypeddict.py",
+]
+
+[tool.antislop.nountypeddict]
+# The engine carries the raw settings of pyproject.toml, so it decodes
+# external data.
+boundary-modules = ["*antislop/engine.py"]
