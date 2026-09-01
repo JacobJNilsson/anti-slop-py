@@ -109,3 +109,42 @@ def test_local_named_error_is_not_an_exception_and_stays_clean() -> None:
         assert str(error) == "missing field"
     """
     assert run(source, "errsemantics", path=TEST_PATH) == []
+
+
+def test_an_error_name_of_another_function_stays_clean() -> None:
+    source = """
+    def test_load() -> None:
+        try:
+            load("")
+        except ValueError as error:
+            assert error.field == "name"
+
+    def test_report() -> None:
+        error = build_report()
+        assert str(error) == "ok"
+    """
+    assert run(source, "errsemantics", path=TEST_PATH) == []
+
+
+def test_the_error_name_of_its_own_function_reports() -> None:
+    source = """
+    def test_load() -> None:
+        try:
+            load("")
+        except ValueError as error:
+            assert str(error) == "ok"
+    """
+    assert run(source, "errsemantics", path=TEST_PATH) == ["6:AS113"]
+
+
+def test_a_nested_function_reads_the_error_name_around_it() -> None:
+    source = """
+    def test_load() -> None:
+        try:
+            load("")
+        except ValueError as error:
+            def check() -> None:
+                assert str(error) == "ok"
+            check()
+    """
+    assert run(source, "errsemantics", path=TEST_PATH) == ["7:AS113"]

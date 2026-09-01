@@ -4,9 +4,14 @@ A test that matches the message of an error decides from prose that no
 API promises. A reword breaks the test. The test must assert the type
 of the exception and its attributes. A match on a stable owned message
 format stays possible through a justification comment. The rule reads
-the error names from the bindings of the file, because both shapes of
+the error names from the bindings of the code, because both shapes of
 the spec bind the error to a name. Test files only.
 See docs/spec/001-overview.md, rule P13.
+
+A binding belongs to the scope that holds it. The name `error` of one
+test is not the name `error` of the next test, so the rule reads one
+scope at a time. A nested function also reads the names of the scope
+around it, because a closure sees them.
 """
 
 from __future__ import annotations
@@ -35,42 +40,61 @@ class ErrSemantics:
     def check(self, ctx: Context) -> Iterator[tuple[ast.AST, str]]:
         if not ctx.is_test:
             return
-        errors = _bound_error_names(ctx.tree)
-        for statement in _statements(ctx.tree):
-            for node, message in _matches(statement, errors):
-                if ctx.justified({node.lineno, statement.lineno}):
-                    continue
-                yield node, message
+        yield from _scope(ctx, ctx.tree, frozenset())
 
 
-def _statements(node: ast.AST) -> Iterator[ast.stmt]:
-    """Yield every statement under a node, nested statements included."""
+def _scope(
+    ctx: Context, node: ast.AST, inherited: frozenset[str]
+) -> Iterator[tuple[ast.AST, str]]:
+    """Check one scope, then every function that the scope defines."""
+    errors = inherited | _bound_error_names(node)
+    for statement in _own_nodes(node):
+        if not isinstance(statement, ast.stmt):
+            continue
+        for found, message in _matches(statement, errors):
+            if ctx.justified({found.lineno, statement.lineno}):
+                continue
+            yield found, message
+    for nested in _nested_functions(node):
+        yield from _scope(ctx, nested, errors)
+
+
+def _own_nodes(node: ast.AST) -> Iterator[ast.AST]:
+    """Yield every node of one scope, without the body of a nested function."""
     for child in ast.iter_child_nodes(node):
-        if isinstance(child, ast.stmt):
+        if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        yield child
+        yield from _own_nodes(child)
+
+
+def _nested_functions(
+    node: ast.AST,
+) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Yield the functions that one scope defines, without deeper ones."""
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef):
             yield child
-            yield from _statements(child)
-        elif not isinstance(child, ast.expr):
-            # An except clause and a match case hold statements, but
-            # neither one is a statement.
-            yield from _statements(child)
+        else:
+            yield from _nested_functions(child)
 
 
-def _bound_error_names(tree: ast.Module) -> set[str]:
-    """Collect the names that an except clause or a raises block binds."""
+def _bound_error_names(node: ast.AST) -> frozenset[str]:
+    """Collect the names that one scope binds to an error."""
     names: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ExceptHandler) and node.name:
-            names.add(node.name)
-        elif isinstance(node, ast.With | ast.AsyncWith):
-            for item in node.items:
+    for child in _own_nodes(node):
+        if isinstance(child, ast.ExceptHandler) and child.name:
+            names.add(child.name)
+        elif isinstance(child, ast.With | ast.AsyncWith):
+            for item in child.items:
                 bound = item.optional_vars
                 if _is_raises_call(item.context_expr) and isinstance(bound, ast.Name):
                     names.add(bound.id)
-    return names
+    return frozenset(names)
 
 
 def _matches(
-    statement: ast.stmt, errors: set[str]
+    statement: ast.stmt, errors: frozenset[str]
 ) -> Iterator[tuple[ast.expr, str]]:
     """Yield the message assertions of one statement, with their message."""
     for child in ast.iter_child_nodes(statement):
@@ -102,7 +126,7 @@ def _matches_wording(call: ast.Call) -> bool:
     return any(keyword.arg == "match" for keyword in call.keywords)
 
 
-def _reads_message(node: ast.Compare, errors: set[str]) -> bool:
+def _reads_message(node: ast.Compare, errors: frozenset[str]) -> bool:
     """Report whether a comparison reads the text of an error."""
     if len(node.ops) != 1:
         return False
@@ -121,7 +145,7 @@ def _is_string(node: ast.expr) -> bool:
     return isinstance(node, ast.Constant) and isinstance(node.value, str)
 
 
-def _is_error_text(node: ast.expr, errors: set[str]) -> bool:
+def _is_error_text(node: ast.expr, errors: frozenset[str]) -> bool:
     """Report whether an expression renders an error as text."""
     if not isinstance(node, ast.Call) or len(node.args) != 1:
         return False
