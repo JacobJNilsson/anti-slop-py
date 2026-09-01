@@ -279,7 +279,7 @@ Research conclusion, verified against primary sources in August 2026:
   pip-installed rule set with config, per-rule codes, and safe
   autofixes. Type info is not built in.
 
-**Decision: a standalone tool, `antislop`, on stdlib `ast` for the ten
+**Decision: a standalone tool, `antislop`, on stdlib `ast` for the
 AST rules, with per-rule codes (AS101...), config in
 `[tool.antislop]` in pyproject.toml, a pre-commit hook, and `# noqa`
 compatible suppression.** The two type-aware rules (P05, full P11) ship
@@ -290,8 +290,9 @@ becomes a goal.
 
 ## Phases
 
-1. **Phase 1, AST rules.** P01, P02, P04, P06, P07, P08, P09, P10, P12,
-   P13, and the AST subset of P11. Ships alone and fast.
+1. **Phase 1, AST rules.** P01, P02, P03, P04, P06, P07, P08, P09,
+   P10, P12, P13, P14, and the AST subset of P11. Ships alone and
+   fast.
 2. **Phase 2, type bridge.** P05 and full P11 through `dmypy inspect`.
 3. **Phase 3, autofix.** Move to LibCST where a fix is mechanical
    (P01 comment insertion has none, P02 has none, some P06 rewrites do).
