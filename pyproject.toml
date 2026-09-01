@@ -35,3 +35,8 @@ select = ["E", "F", "W", "B", "I", "UP", "RET", "SIM", "PGH"]
 
 [tool.antislop]
 # The linter runs on itself with the default rule set.
+
+[tool.antislop.nountypeddict]
+# The engine carries the raw settings of pyproject.toml, so it decodes
+# external data.
+boundary-modules = ["*antislop/engine.py"]

@@ -13,6 +13,7 @@ from antislop.engine import check_source
 from antislop.rules import ALL_RULES
 
 
+# The settings come from pyproject.toml, which holds raw data.
 def run(
     source: str,
     rule_name: str,
