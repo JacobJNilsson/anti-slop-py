@@ -1,0 +1,205 @@
+"""Tests of rule P03 noanyparam, from docs/spec/001-overview.md."""
+
+from helpers import run
+
+from antislop.rules import ALL_RULES
+
+
+def test_the_rule_ships_off() -> None:
+    rules = [rule for rule in ALL_RULES if rule.name == "noanyparam"]
+    assert [rule.default_on for rule in rules] == [False]
+
+
+def test_any_parameter_reports() -> None:
+    source = """
+    from typing import Any
+
+    def load(payload: Any) -> int:
+        return 1
+    """
+    assert run(source, "noanyparam") == ["4:AS103"]
+
+
+def test_object_parameter_reports() -> None:
+    source = """
+    def load(payload: object) -> int:
+        return 1
+    """
+    assert run(source, "noanyparam") == ["2:AS103"]
+
+
+def test_module_alias_reports() -> None:
+    source = """
+    from typing import Any
+
+    Payload = Any
+
+    def load(payload: Payload) -> int:
+        return 1
+    """
+    assert run(source, "noanyparam") == ["6:AS103"]
+
+
+def test_domain_types_stay_clean() -> None:
+    source = """
+    from typing import Protocol, TypeVar
+
+    T = TypeVar("T")
+
+
+    class Reader(Protocol):
+        def read(self) -> str: ...
+
+
+    class Store:
+        def load(self, source: Reader, value: T) -> T:
+            return value
+    """
+    assert run(source, "noanyparam") == []
+
+
+def test_lambda_stays_clean() -> None:
+    source = """
+    identity = lambda value: value
+    """
+    assert run(source, "noanyparam") == []
+
+
+def test_comment_above_def_justifies() -> None:
+    source = """
+    from typing import Any
+
+    # The plugin API hands the payload over untyped.
+    def load(payload: Any) -> int:
+        return 1
+    """
+    assert run(source, "noanyparam") == []
+
+
+def test_a_lone_forwarded_kwargs_reports() -> None:
+    source = """
+    from collections.abc import Callable
+    from typing import Any
+
+    def wrap(func: Callable[..., int], **kwargs: Any) -> int:
+        return func(**kwargs)
+    """
+    assert run(source, "noanyparam") == ["5:AS103"]
+
+
+def test_a_lone_forwarded_star_args_reports() -> None:
+    source = """
+    from collections.abc import Callable
+    from typing import Any
+
+    def wrap(func: Callable[..., int], *args: Any) -> int:
+        return func(*args)
+    """
+    assert run(source, "noanyparam") == ["5:AS103"]
+
+
+def test_the_pair_forwarded_twice_reports() -> None:
+    source = """
+    from collections.abc import Callable
+    from typing import Any
+
+    def wrap(
+        first: Callable[..., int],
+        second: Callable[..., int],
+        *args: Any,
+        **kwargs: Any,
+    ) -> int:
+        first(*args, **kwargs)
+        return second(*args, **kwargs)
+    """
+    assert run(source, "noanyparam") == ["8:AS103", "9:AS103"]
+
+
+def test_kwargs_read_but_not_forwarded_report() -> None:
+    source = """
+    from typing import Any
+
+    def wrap(**kwargs: Any) -> int:
+        return len(kwargs)
+    """
+    assert run(source, "noanyparam") == ["4:AS103"]
+
+
+def test_star_args_of_a_forwarding_wrapper_stay_clean() -> None:
+    source = """
+    from collections.abc import Callable
+    from typing import Any
+
+    def wrap(
+        func: Callable[..., int],
+        *args: Any,
+        **kwargs: Any,
+    ) -> int:
+        return func(*args, **kwargs)
+    """
+    assert run(source, "noanyparam") == []
+
+
+def test_the_canonical_wrapper_stays_clean() -> None:
+    source = """
+    from typing import Any
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return f(*args, **kwargs)
+    """
+    assert run(source, "noanyparam") == []
+
+
+def test_star_args_without_forwarding_report() -> None:
+    source = """
+    from typing import Any
+
+    def count(*args: Any) -> int:
+        return len(args)
+    """
+    assert run(source, "noanyparam") == ["4:AS103"]
+
+
+def test_star_args_that_the_wrapper_keeps_report() -> None:
+    source = """
+    from collections.abc import Callable
+    from typing import Any
+
+    def wrap(
+        func: Callable[..., int],
+        *args: Any,
+        **kwargs: Any,
+    ) -> int:
+        return func(args, **kwargs)
+    """
+    assert run(source, "noanyparam") == ["7:AS103", "8:AS103"]
+
+
+def test_string_annotation_reports() -> None:
+    source = """
+    from typing import Any
+
+    def load(payload: "Any") -> int:
+        return 1
+    """
+    assert run(source, "noanyparam") == ["4:AS103"]
+
+
+def test_any_inside_a_generic_stays_clean() -> None:
+    source = """
+    from typing import Any
+
+    def load(values: list[Any]) -> int:
+        return len(values)
+    """
+    assert run(source, "noanyparam") == []
+
+
+def test_any_through_an_aliased_typing_module_reports() -> None:
+    source = """
+    import typing as t
+
+    def load(payload: t.Any) -> int:
+        return 1
+    """
+    assert run(source, "noanyparam") == ["4:AS103"]
