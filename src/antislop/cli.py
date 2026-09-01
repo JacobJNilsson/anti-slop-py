@@ -40,7 +40,9 @@ def run(paths: list[Path]) -> list[Diagnostic]:
     rules = enabled_rules(config.enable, config.disable)
     found: list[Diagnostic] = []
     for file in python_files(paths):
-        source = file.read_text(encoding="utf-8", errors="replace")
+        # An editor may write a byte order mark. The utf-8-sig codec
+        # drops it, and the parser then reads a valid file.
+        source = file.read_text(encoding="utf-8-sig", errors="replace")
         found.extend(check_source(source, file, rules, config.settings))
     return found
 
@@ -52,6 +54,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("paths", nargs="*", type=Path, default=[Path.cwd()])
     arguments = parser.parse_args(argv)
     paths = arguments.paths or [Path.cwd()]
+    missing = [path for path in paths if not path.exists()]
+    if missing:
+        # A path that does not exist is a mistake of the caller. A
+        # silent pass would hide it from a hook and from CI.
+        for path in missing:
+            print(f"antislop: {path}: no such file or directory", file=sys.stderr)
+        return 2
     found = run(paths)
     for diagnostic in found:
         print(diagnostic.render())
