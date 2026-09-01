@@ -3,8 +3,10 @@
 A test that matches the message of an error decides from prose that no
 API promises. A reword breaks the test. The test must assert the type
 of the exception and its attributes. A match on a stable owned message
-format stays possible through a justification comment. Test files
-only. See docs/spec/001-overview.md, rule P13.
+format stays possible through a justification comment. The rule reads
+the error names from the bindings of the file, because both shapes of
+the spec bind the error to a name. Test files only.
+See docs/spec/001-overview.md, rule P13.
 """
 
 from __future__ import annotations
@@ -23,15 +25,6 @@ TEXT_MESSAGE = (
     "the assertion reads the text of the error, and a reword breaks it. "
     "Assert the type of the exception and its attributes."
 )
-_ERROR_NAMES = {
-    "e",
-    "err",
-    "error",
-    "ex",
-    "exc",
-    "excinfo",
-    "exception",
-}
 
 
 class ErrSemantics:
@@ -42,7 +35,7 @@ class ErrSemantics:
     def check(self, ctx: Context) -> Iterator[tuple[ast.AST, str]]:
         if not ctx.is_test:
             return
-        errors = _ERROR_NAMES | _bound_error_names(ctx.tree)
+        errors = _bound_error_names(ctx.tree)
         for statement in _statements(ctx.tree):
             for node, message in _matches(statement, errors):
                 if ctx.justified({node.lineno, statement.lineno}):

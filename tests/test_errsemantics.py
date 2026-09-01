@@ -90,3 +90,12 @@ def test_production_file_stays_clean() -> None:
             read(path)
     """
     assert run(source, "errsemantics", path="src/loader.py") == []
+
+
+def test_local_named_error_is_not_an_exception_and_stays_clean() -> None:
+    source = """
+    def test_report() -> None:
+        error = build_report()
+        assert str(error) == "missing field"
+    """
+    assert run(source, "errsemantics", path=TEST_PATH) == []
