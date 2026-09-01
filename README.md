@@ -23,6 +23,20 @@ src/app.py:41:8: AS110 justifyswallow: the except handler discards the error. ..
 
 Configure rules in `pyproject.toml` under `[tool.antislop]`.
 
+### pre-commit
+
+Name this repository in `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/JacobJNilsson/anti-slop-py
+    rev: v0.1.0
+    hooks:
+      - id: antislop
+```
+
+The hook runs the linter over the staged Python files.
+
 ## Development
 
 ```sh

@@ -1,0 +1,5 @@
+- id: antislop
+  name: antislop
+  entry: antislop
+  language: python
+  types: [python]
