@@ -21,6 +21,24 @@ def test_literal_initializer_reports() -> None:
     assert run(source, "noanydecl") == ["2:AS114"]
 
 
+def test_negative_literal_initializer_reports() -> None:
+    source = """
+    from typing import Any
+
+    margin: Any = -1
+    """
+    assert run(source, "noanydecl") == ["4:AS114"]
+
+
+def test_comprehension_initializer_reports() -> None:
+    source = """
+    from typing import Any
+
+    names: Any = [item.name for item in records]
+    """
+    assert run(source, "noanydecl") == ["4:AS114"]
+
+
 def test_display_and_fstring_initializers_report() -> None:
     source = """
     from typing import Any

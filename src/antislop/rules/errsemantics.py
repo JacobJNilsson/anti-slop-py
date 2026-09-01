@@ -109,10 +109,9 @@ def _reads_message(node: ast.Compare, errors: set[str]) -> bool:
     operator = node.ops[0]
     left, right = node.left, node.comparators[0]
     if isinstance(operator, ast.Eq):
-        pair = [left, right]
-        return any(_is_error_text(item, errors) for item in pair) and any(
-            _is_string(item) for item in pair
-        )
+        # The other side is a literal or a named expectation. Both
+        # decide from the wording of the error.
+        return any(_is_error_text(item, errors) for item in (left, right))
     if isinstance(operator, ast.In):
         return _is_string(left) and _is_error_text(right, errors)
     return False

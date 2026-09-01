@@ -35,8 +35,7 @@ class FullObjectComp:
         for function in functions(ctx.tree):
             counted: dict[str, list[ast.stmt]] = {}
             for statement in statements(function.body):
-                subject = _subject(statement)
-                if subject is not None:
+                for subject in _subjects(statement):
                     counted.setdefault(subject, []).append(statement)
             for group in counted.values():
                 if len(group) >= threshold:
@@ -45,39 +44,54 @@ class FullObjectComp:
 
 # The settings hold raw pyproject data.
 def _threshold(settings: dict[str, object]) -> int:
-    """Read the count of per-attribute assertions that the rule allows."""
+    """Read the count of per-attribute assertions at which the rule reports."""
     configured = settings.get("threshold")
     if isinstance(configured, int) and not isinstance(configured, bool):
         return configured
     return DEFAULT_THRESHOLD
 
 
-def _subject(statement: ast.stmt) -> str | None:
-    """Return the name that a per-attribute equality assertion reads."""
+def _subjects(statement: ast.stmt) -> list[str]:
+    """Return the subject of each per-attribute equality of one statement."""
     if isinstance(statement, ast.Assert):
-        return _compared_attribute(statement.test)
+        return _compared_attributes(statement.test)
     if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call):
-        return _asserted_attribute(statement.value)
-    return None
+        found = _asserted_attribute(statement.value)
+        return [] if found is None else [found]
+    return []
+
+
+def _compared_attributes(test: ast.expr) -> list[str]:
+    """Return the subject of every equality that one assert holds.
+
+    One assert joins comparisons with and or with or, so the walk reads
+    the values of a boolean operator. Each comparison counts once.
+    """
+    if isinstance(test, ast.BoolOp):
+        return [name for value in test.values for name in _compared_attributes(value)]
+    found = _compared_attribute(test)
+    return [] if found is None else [found]
 
 
 def _compared_attribute(test: ast.expr) -> str | None:
-    """Return the root name of an `a.x == value` comparison."""
+    """Return the root name of an `a.x == value` comparison, from either side."""
     if not isinstance(test, ast.Compare) or len(test.ops) != 1:
         return None
     if not isinstance(test.ops[0], ast.Eq):
         return None
-    return _attribute_root(test.left)
+    left = _attribute_root(test.left)
+    return left if left is not None else _attribute_root(test.comparators[0])
 
 
 def _asserted_attribute(call: ast.Call) -> str | None:
-    """Return the root name of an assertEqual(a.x, value) call."""
+    """Return the root name of an assertEqual(a.x, value) call, from either side."""
     name = call.func.attr if isinstance(call.func, ast.Attribute) else None
     if isinstance(call.func, ast.Name):
         name = call.func.id
     if name not in _EQUAL_ASSERTIONS or not call.args:
         return None
-    return _attribute_root(call.args[0])
+    found = [_attribute_root(argument) for argument in call.args[:2]]
+    return next((root for root in found if root is not None), None)
 
 
 def _attribute_root(node: ast.expr) -> str | None:

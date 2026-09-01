@@ -34,6 +34,16 @@ def test_string_equality_on_the_error_reports() -> None:
     assert run(source, "errsemantics", path=TEST_PATH) == ["6:AS113"]
 
 
+def test_equality_with_a_named_expectation_reports() -> None:
+    source = """
+    def test_load() -> None:
+        with pytest.raises(ValueError) as excinfo:
+            load("")
+        assert str(excinfo.value) == EXPECTED
+    """
+    assert run(source, "errsemantics", path=TEST_PATH) == ["5:AS113"]
+
+
 def test_substring_of_the_error_reports() -> None:
     source = """
     def test_load() -> None:

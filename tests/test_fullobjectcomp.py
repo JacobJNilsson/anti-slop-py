@@ -28,6 +28,26 @@ def test_assert_equal_calls_report() -> None:
     assert run(source, "fullobjectcomp", path=TEST_PATH) == ["5:AS112"]
 
 
+def test_attribute_on_the_right_of_the_comparison_reports() -> None:
+    source = """
+    def test_order() -> None:
+        order = build()
+        assert 10 == order.total
+        assert "SEK" == order.currency
+        assert 2 == order.lines
+    """
+    assert run(source, "fullobjectcomp", path=TEST_PATH) == ["4:AS112"]
+
+
+def test_one_assert_of_joined_comparisons_reports() -> None:
+    source = """
+    def test_order() -> None:
+        order = build()
+        assert order.total == 10 and order.currency == "SEK" and order.lines == 2
+    """
+    assert run(source, "fullobjectcomp", path=TEST_PATH) == ["4:AS112"]
+
+
 def test_nested_attribute_counts_on_its_root() -> None:
     source = """
     def test_order() -> None:

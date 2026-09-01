@@ -3,7 +3,7 @@
 Several rules ask the same questions of one tree. Which functions does
 this file define? Which statements does one function body hold, without
 the bodies of a nested scope? Which expressions belong to one
-statement, and not to a statement inside it? What does an assignment
+statement, and not to a statement inside it? What does a statement
 write to, and which name sits at the root of an attribute path? This
 module answers each question once.
 """
@@ -67,15 +67,21 @@ def _expressions(node: ast.expr) -> Iterator[ast.expr]:
 
 
 def assigned_targets(node: ast.AST) -> list[ast.expr]:
-    """Return what one assignment statement writes to.
+    """Return what one statement writes to.
 
     An unpacking target holds the names it writes to, so the result
-    flattens a tuple, a list, and a starred target.
+    flattens a tuple, a list, and a starred target. A for loop and the
+    as clause of a with statement write to a target in the same way.
     """
     if isinstance(node, ast.Assign):
         return _flatten(node.targets)
     if isinstance(node, ast.AnnAssign | ast.AugAssign):
         return _flatten([node.target])
+    if isinstance(node, ast.For | ast.AsyncFor):
+        return _flatten([node.target])
+    if isinstance(node, ast.With | ast.AsyncWith):
+        bound = [item.optional_vars for item in node.items]
+        return _flatten([target for target in bound if target is not None])
     return []
 
 

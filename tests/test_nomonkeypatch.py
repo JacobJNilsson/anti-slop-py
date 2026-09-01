@@ -115,3 +115,25 @@ def test_list_unpacking_target_reports() -> None:
         [sys.argv] = build()
     """
     assert run(source, "nomonkeypatch") == ["5:AS108"]
+
+
+def test_for_loop_target_reports() -> None:
+    source = """
+    import os
+
+    def boot() -> None:
+        for os.environ in []:
+            pass
+    """
+    assert run(source, "nomonkeypatch") == ["5:AS108"]
+
+
+def test_with_as_target_reports() -> None:
+    source = """
+    import os
+
+    def boot() -> None:
+        with open("f") as os.altsep:
+            pass
+    """
+    assert run(source, "nomonkeypatch") == ["5:AS108"]

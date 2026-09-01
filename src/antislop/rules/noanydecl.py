@@ -5,8 +5,9 @@ evidence away at the declaration. The author deletes the annotation and
 keeps the inferred type, or names the concrete type.
 
 Phase 1 reads the initializers whose type is evident from the syntax.
-These are a literal, a display of a list, dict, set, or tuple, and an
-f-string. A call of a name with a capital first letter is also evident,
+These are a literal, a sign over a literal, a display of a list, dict,
+set, or tuple, a comprehension, and an f-string. A call of a name with
+a capital first letter is also evident,
 because that is the constructor convention. A None or an Ellipsis
 initializer states no value, so the rule skips it. A lower case call is
 opaque until the type bridge of phase 2 arrives. A module level alias
@@ -54,6 +55,11 @@ def _is_evident(value: ast.expr) -> bool:
         return value.value is not None and value.value is not Ellipsis
     if isinstance(value, ast.List | ast.Dict | ast.Set | ast.Tuple | ast.JoinedStr):
         return True
+    if isinstance(value, ast.ListComp | ast.SetComp | ast.DictComp):
+        return True
+    if isinstance(value, ast.UnaryOp):
+        # A sign or a not over a constant keeps the type of the constant.
+        return _is_evident(value.operand)
     if isinstance(value, ast.Call):
         name = dotted_name(value.func)
         return name is not None and name.rsplit(".", 1)[-1][:1].isupper()

@@ -78,6 +78,44 @@ def test_different_names_stay_clean() -> None:
     assert run(source, "noadhocisinstance") == []
 
 
+def test_attribute_path_dispatch_reports() -> None:
+    source = """
+    def render(node: Node) -> str:
+        if isinstance(node.value, Heading):
+            return heading(node.value)
+        elif isinstance(node.value, Paragraph):
+            return paragraph(node.value)
+        return ""
+    """
+    assert run(source, "noadhocisinstance") == ["3:AS106"]
+
+
+def test_two_attributes_of_one_object_stay_clean() -> None:
+    source = """
+    def render(node: Node) -> str:
+        if isinstance(node.value, Heading):
+            return heading(node.value)
+        elif isinstance(node.target, Paragraph):
+            return paragraph(node.target)
+        return ""
+    """
+    assert run(source, "noadhocisinstance") == []
+
+
+def test_the_report_sits_on_the_first_isinstance_branch() -> None:
+    source = """
+    def render(node: object) -> str:
+        if node is None:
+            return ""
+        elif isinstance(node, Heading):
+            return heading(node)
+        elif isinstance(node, Paragraph):
+            return paragraph(node)
+        return ""
+    """
+    assert run(source, "noadhocisinstance") == ["5:AS106"]
+
+
 def test_boundary_module_setting_exempts_the_file() -> None:
     source = """
     def decode(node: object) -> str:

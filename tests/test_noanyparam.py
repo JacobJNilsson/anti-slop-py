@@ -113,7 +113,7 @@ def test_kwargs_read_but_not_forwarded_report() -> None:
     assert run(source, "noanyparam") == ["4:AS103"]
 
 
-def test_star_args_of_a_forwarding_wrapper_reports() -> None:
+def test_star_args_of_a_forwarding_wrapper_stay_clean() -> None:
     source = """
     from collections.abc import Callable
     from typing import Any
@@ -124,6 +124,41 @@ def test_star_args_of_a_forwarding_wrapper_reports() -> None:
         **kwargs: Any,
     ) -> int:
         return func(*args, **kwargs)
+    """
+    assert run(source, "noanyparam") == []
+
+
+def test_the_canonical_wrapper_stays_clean() -> None:
+    source = """
+    from typing import Any
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return f(*args, **kwargs)
+    """
+    assert run(source, "noanyparam") == []
+
+
+def test_star_args_without_forwarding_report() -> None:
+    source = """
+    from typing import Any
+
+    def count(*args: Any) -> int:
+        return len(args)
+    """
+    assert run(source, "noanyparam") == ["4:AS103"]
+
+
+def test_star_args_that_the_wrapper_keeps_report() -> None:
+    source = """
+    from collections.abc import Callable
+    from typing import Any
+
+    def wrap(
+        func: Callable[..., int],
+        *args: Any,
+        **kwargs: Any,
+    ) -> int:
+        return func(args, **kwargs)
     """
     assert run(source, "noanyparam") == ["7:AS103"]
 
