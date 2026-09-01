@@ -85,11 +85,26 @@ def _scan(
         for field, value in ast.iter_fields(statement):
             if not isinstance(value, list):
                 continue
-            nested = [item for item in value if isinstance(item, ast.stmt)]
+            nested = _statements_of(value)
             if not nested:
                 continue
             entry = inner or (main_block and field == "body")
             yield from _scan(nested, entry, patterns)
+
+
+def _statements_of(items: list[ast.AST]) -> list[ast.stmt]:
+    """Return the statements of one field of a statement.
+
+    An except handler and a match case hold a body, but neither one is
+    a statement, so the walk reads the body of each.
+    """
+    found: list[ast.stmt] = []
+    for item in items:
+        if isinstance(item, ast.stmt):
+            found.append(item)
+        elif isinstance(item, ast.ExceptHandler | ast.match_case):
+            found.extend(item.body)
+    return found
 
 
 def _is_entry_point(

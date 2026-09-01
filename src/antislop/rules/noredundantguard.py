@@ -4,7 +4,9 @@ A guard that repeats the annotation of a parameter is defensiveness
 without evidence. It tells the reader that the author did not trust the
 annotation, and it keeps a dead branch alive. Phase 1 catches the part
 the AST shows: a guard on a parameter tested against its own
-annotation in the same function. See docs/spec/001-overview.md, P11.
+annotation in the same function. No comment clears a report. The
+author deletes the guard, or fixes the annotation.
+See docs/spec/001-overview.md, P11.
 """
 
 from __future__ import annotations
@@ -44,8 +46,6 @@ class NoRedundantGuard:
                         continue
                     message = _redundant(node, annotated)
                     if message is None:
-                        continue
-                    if ctx.justified({node.lineno, statement.lineno}):
                         continue
                     yield node, message
 

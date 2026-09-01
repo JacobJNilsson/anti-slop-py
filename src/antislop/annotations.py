@@ -5,11 +5,12 @@ questions. Which local name means typing.Any? Which annotation names a
 dict that carries no value type? Which module level alias stands for
 such a type? This module answers them from one pass over the file.
 
-Alias resolution covers module level aliases of the same file, in the
-three forms of the spec: a plain assignment, a TypeAlias annotation,
-and the type statement of Python 3.12. A cross module alias is out of
-scope for phase 1. See docs/spec/001-overview.md, rules P02 to P04 and
-P14.
+Alias resolution covers the module level aliases of the same file. The
+spec gives three forms: a plain assignment, a TypeAlias annotation, and
+the type statement of Python 3.12. A cross module alias is out of scope
+for phase 1. A string annotation names the same type as the code it
+holds, so the module parses it. See docs/spec/001-overview.md, rules
+P02 to P04 and P14.
 """
 
 from __future__ import annotations
@@ -64,6 +65,7 @@ class Annotations:
         """Return the type that an annotation names, through its aliases."""
         seen: set[str] = set()
         while True:
+            node = _unquote(node)
             name = dotted_name(node)
             if name is None or name in seen or name not in self.aliases:
                 return node
@@ -108,19 +110,28 @@ class Annotations:
             return False
         return self.is_wide(arguments[1])
 
-    def _members(self, node: ast.expr) -> list[ast.expr]:
-        """Return the members of a union, or the annotation itself."""
+    def _members(
+        self, node: ast.expr, seen: list[ast.expr] | None = None
+    ) -> list[ast.expr]:
+        """Return one annotation and every type that it holds.
+
+        A union hides an untyped dict, and so does any other generic.
+        The walk therefore reads the arguments of every subscript. The
+        seen list stops a recursive alias.
+        """
+        visited = [] if seen is None else seen
         resolved = self.resolve(node)
+        if any(item is resolved for item in visited):
+            return []
+        visited.append(resolved)
         if isinstance(resolved, ast.BinOp) and isinstance(resolved.op, ast.BitOr):
-            return self._members(resolved.left) + self._members(resolved.right)
+            left = self._members(resolved.left, visited)
+            return left + self._members(resolved.right, visited)
         if isinstance(resolved, ast.Subscript):
-            base = dotted_name(resolved.value)
-            plain = base.rsplit(".", 1)[-1] if base else ""
-            if plain in {"Optional", "Union"}:
-                members: list[ast.expr] = []
-                for argument in _subscript_arguments(resolved):
-                    members.extend(self._members(argument))
-                return members
+            members: list[ast.expr] = [resolved]
+            for argument in _subscript_arguments(resolved):
+                members.extend(self._members(argument, visited))
+            return members
         return [resolved]
 
     def _is_dict_name(self, name: str) -> bool:
@@ -132,6 +143,19 @@ class Annotations:
         return name in self.mapping_names or name in {
             f"{module}.Mapping" for module in _MAPPING_MODULES
         }
+
+
+def _unquote(node: ast.expr) -> ast.expr:
+    """Return the annotation that a string annotation holds."""
+    if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+        return node
+    try:
+        parsed = ast.parse(node.value, mode="eval")
+    except SyntaxError:
+        # A string that does not parse is the report of the type
+        # checker, not of this linter.
+        return node
+    return ast.copy_location(parsed.body, node)
 
 
 def _subscript_arguments(node: ast.Subscript) -> list[ast.expr]:

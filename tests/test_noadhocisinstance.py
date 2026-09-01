@@ -105,3 +105,27 @@ def test_two_branch_union_check_at_a_boundary_stays_clean() -> None:
     settings: dict[str, object] = {"boundary-modules": ["src/codec/*"]}
     assert run(source, "noadhocisinstance", "src/codec/json.py", settings) == []
     assert run(source, "noadhocisinstance", "src/app/render.py") == ["3:AS106"]
+
+
+def test_isinstance_inside_a_boolean_operator_reports() -> None:
+    source = """
+    def render(node: object) -> str:
+        if isinstance(node, Heading) and node.level == 1:
+            return heading(node)
+        elif isinstance(node, Paragraph):
+            return paragraph(node)
+        return ""
+    """
+    assert run(source, "noadhocisinstance") == ["3:AS106"]
+
+
+def test_negated_isinstance_reports() -> None:
+    source = """
+    def render(node: object) -> str:
+        if not isinstance(node, Heading):
+            return ""
+        elif isinstance(node, Paragraph):
+            return paragraph(node)
+        return ""
+    """
+    assert run(source, "noadhocisinstance") == ["3:AS106"]

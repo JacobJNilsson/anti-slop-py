@@ -101,3 +101,24 @@ def test_comment_above_multiline_statement_justifies() -> None:
         return value
     """
     assert run(source, "justifycast") == []
+
+
+def test_cast_in_a_with_header_reports() -> None:
+    source = """
+    from typing import cast
+
+    def load(raw: object) -> bytes:
+        with open(cast(str, raw)) as handle:
+            return handle.read()
+    """
+    assert run(source, "justifycast") == ["5:AS101"]
+
+
+def test_chained_cast_reports_once() -> None:
+    source = """
+    from typing import cast
+
+    def load(raw: object) -> int:
+        return cast(int, cast(object, raw))
+    """
+    assert run(source, "justifycast") == ["5:AS101"]

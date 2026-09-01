@@ -114,3 +114,15 @@ def test_return_computed_value_stays_clean() -> None:
             return fallback
     """
     assert run(source, "justifyswallow") == []
+
+
+def test_break_reports() -> None:
+    source = """
+    def drain(items: list) -> None:
+        for item in items:
+            try:
+                push(item)
+            except Exception:
+                break
+    """
+    assert run(source, "justifyswallow") == ["6:AS110"]

@@ -105,3 +105,12 @@ def test_comment_above_statement_justifies() -> None:
     settings: Any = Config()
     """
     assert run(source, "noanydecl") == []
+
+
+def test_string_annotation_reports() -> None:
+    source = """
+    from typing import Any
+
+    limit: "Any" = 5
+    """
+    assert run(source, "noanydecl") == ["4:AS114"]

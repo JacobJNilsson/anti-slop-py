@@ -67,3 +67,18 @@ def test_is_test_path() -> None:
 def test_rule_codes_are_unique() -> None:
     codes = [rule.code for rule in ALL_RULES]
     assert len(codes) == len(set(codes))
+
+
+def test_is_test_path_covers_a_root_conftest() -> None:
+    assert is_test_path(Path("conftest.py")) is True
+
+
+def test_noqa_after_other_text_suppresses() -> None:
+    source = """
+    def warm(cache: object) -> None:
+        try:
+            cache.warm()
+        except Exception:  # explain  # noqa: AS110
+            pass
+    """
+    assert run(source, "justifyswallow") == []

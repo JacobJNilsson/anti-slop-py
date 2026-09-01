@@ -59,7 +59,9 @@ def index_comments(source: str) -> CommentIndex:
         before = lines[row - 1][:col] if row - 1 < len(lines) else ""
         if not before.strip():
             own_line.add(row)
-        match = _NOQA.match(token.string)
+        # A noqa tag sits anywhere in the comment, as flake8 and ruff
+        # read it.
+        match = _NOQA.search(token.string)
         if match:
             codes = match.group("codes")
             listed = re.split(r"[,\s]+", codes.upper()) if codes else []

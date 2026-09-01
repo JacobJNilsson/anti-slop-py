@@ -57,14 +57,37 @@ def test_narrowing_to_a_subclass_stays_clean() -> None:
     assert run(source, "noredundantguard") == []
 
 
-def test_comment_above_justifies() -> None:
+def test_comment_above_does_not_clear_the_report() -> None:
     source = """
     def save(order: Order) -> None:
         # The queue holds records of an old release without the annotation.
         if isinstance(order, Order):
             store(order)
     """
-    assert run(source, "noredundantguard") == []
+    assert run(source, "noredundantguard") == ["4:AS111"]
+
+
+def test_guard_inside_an_except_handler_reports() -> None:
+    source = """
+    def save(order: Order) -> None:
+        try:
+            store(order)
+        except OSError:
+            if isinstance(order, Order):
+                retry(order)
+    """
+    assert run(source, "noredundantguard") == ["6:AS111"]
+
+
+def test_guard_inside_a_match_case_reports() -> None:
+    source = """
+    def save(order: Order, command: str) -> None:
+        match command:
+            case "store":
+                if isinstance(order, Order):
+                    store(order)
+    """
+    assert run(source, "noredundantguard") == ["5:AS111"]
 
 
 def test_optional_annotation_stays_clean() -> None:

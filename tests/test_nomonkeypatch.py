@@ -95,3 +95,23 @@ def test_test_file_stays_clean() -> None:
         config.DEBUG = True
     """
     assert run(source, "nomonkeypatch", "tests/test_boot.py") == []
+
+
+def test_tuple_unpacking_target_reports() -> None:
+    source = """
+    import sys
+
+    def boot() -> None:
+        sys.path, other = build()
+    """
+    assert run(source, "nomonkeypatch") == ["5:AS108"]
+
+
+def test_list_unpacking_target_reports() -> None:
+    source = """
+    import sys
+
+    def boot() -> None:
+        [sys.argv] = build()
+    """
+    assert run(source, "nomonkeypatch") == ["5:AS108"]

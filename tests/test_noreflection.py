@@ -1,5 +1,7 @@
 """Tests of rule P07 noreflection, from docs/spec/001-overview.md."""
 
+from pathlib import Path
+
 from helpers import run
 
 
@@ -100,4 +102,16 @@ def test_boundary_module_setting_exempts_the_file() -> None:
     settings: dict[str, object] = {"boundary-modules": ["*/codec.py", "*/plugins.py"]}
     assert run(source, "noreflection", "src/app/codec.py", settings) == []
     assert run(source, "noreflection", "src/app/plugins.py", settings) == []
+    assert run(source, "noreflection", "src/app/order.py", settings) == ["3:AS107"]
+
+
+def test_boundary_pattern_holds_for_an_absolute_path() -> None:
+    source = """
+    def encode(record: object, field: str) -> object:
+        return getattr(record, field)
+    """
+    settings: dict[str, object] = {"boundary-modules": ["src/app/codec.py"]}
+    absolute = str(Path.cwd() / "src" / "app" / "codec.py")
+    assert run(source, "noreflection", absolute, settings) == []
+    assert run(source, "noreflection", "src/app/codec.py", settings) == []
     assert run(source, "noreflection", "src/app/order.py", settings) == ["3:AS107"]

@@ -27,28 +27,70 @@ def statements(body: list[ast.stmt]) -> Iterator[ast.stmt]:
         if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
             continue
         yield statement
-        for child in ast.iter_child_nodes(statement):
-            if isinstance(child, ast.stmt):
+        yield from _nested_statements(statement)
+
+
+def _nested_statements(node: ast.AST) -> Iterator[ast.stmt]:
+    """Yield the statements under one node, without nested scopes."""
+    for child in ast.iter_child_nodes(node):
+        match child:
+            case ast.stmt():
                 yield from statements([child])
+            case ast.expr():
+                continue
+            case _:
+                # An except handler and a match case hold statements,
+                # but neither one is a statement.
+                yield from _nested_statements(child)
 
 
 def direct_expressions(statement: ast.stmt) -> Iterator[ast.expr]:
     """Yield the expressions of one statement, not those of a nested one."""
     for child in ast.iter_child_nodes(statement):
-        if not isinstance(child, ast.expr):
+        if isinstance(child, ast.stmt):
             continue
-        for node in ast.walk(child):
-            if isinstance(node, ast.expr):
-                yield node
+        if isinstance(child, ast.expr):
+            yield from _expressions(child)
+            continue
+        # A with item, an except handler, and a match case hold the
+        # expressions of the header of the statement.
+        for inner in ast.iter_child_nodes(child):
+            if isinstance(inner, ast.expr):
+                yield from _expressions(inner)
+
+
+def _expressions(node: ast.expr) -> Iterator[ast.expr]:
+    """Yield one expression and every expression under it."""
+    for found in ast.walk(node):
+        if isinstance(found, ast.expr):
+            yield found
 
 
 def assigned_targets(node: ast.AST) -> list[ast.expr]:
-    """Return what one assignment statement writes to."""
+    """Return what one assignment statement writes to.
+
+    An unpacking target holds the names it writes to, so the result
+    flattens a tuple, a list, and a starred target.
+    """
     if isinstance(node, ast.Assign):
-        return list(node.targets)
+        return _flatten(node.targets)
     if isinstance(node, ast.AnnAssign | ast.AugAssign):
-        return [node.target]
+        return _flatten([node.target])
     return []
+
+
+def _flatten(targets: list[ast.expr]) -> list[ast.expr]:
+    """Return the targets of an assignment, unpacked ones included."""
+    found: list[ast.expr] = []
+    for target in targets:
+        match target:
+            case ast.Tuple() | ast.List():
+                found.extend(_flatten(list(target.elts)))
+            case ast.Starred():
+                found.extend(_flatten([target.value]))
+            case _:
+                found.append(target)
+    return found
 
 
 def root_name(node: ast.expr) -> str | None:

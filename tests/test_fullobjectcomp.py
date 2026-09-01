@@ -106,3 +106,17 @@ def test_production_file_stays_clean() -> None:
         assert order.lines == 2
     """
     assert run(source, "fullobjectcomp", path="src/order.py") == []
+
+
+def test_asserts_inside_an_except_handler_report() -> None:
+    source = """
+    def test_order() -> None:
+        order = build()
+        try:
+            check(order)
+        except AssertionError:
+            assert order.total == 10
+            assert order.currency == "SEK"
+            assert order.lines == 2
+    """
+    assert run(source, "fullobjectcomp", path=TEST_PATH) == ["7:AS112"]

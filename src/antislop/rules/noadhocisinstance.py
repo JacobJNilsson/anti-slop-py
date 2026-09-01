@@ -55,10 +55,27 @@ def _dispatches(head: ast.If) -> bool:
     """Report whether one chain tests isinstance twice on one name."""
     counts: dict[str, int] = {}
     for test in _chain_tests(head):
-        name = _isinstance_name(test)
-        if name is not None:
+        for name in set(_tested_names(test)):
             counts[name] = counts.get(name, 0) + 1
     return any(count >= 2 for count in counts.values())
+
+
+def _tested_names(test: ast.expr) -> Iterator[str]:
+    """Yield the names that one branch tests with isinstance.
+
+    A branch holds the call inside an and, an or, or a not, so the walk
+    reads through those operators.
+    """
+    if isinstance(test, ast.BoolOp):
+        for value in test.values:
+            yield from _tested_names(value)
+        return
+    if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+        yield from _tested_names(test.operand)
+        return
+    name = _isinstance_name(test)
+    if name is not None:
+        yield name
 
 
 def _chain_tests(head: ast.If) -> Iterator[ast.expr]:

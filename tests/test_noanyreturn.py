@@ -110,3 +110,13 @@ def test_method_return_reports() -> None:
             return 1
     """
     assert run(source, "noanyreturn") == ["6:AS104"]
+
+
+def test_string_annotation_reports() -> None:
+    source = """
+    from typing import Any
+
+    def load() -> "Any":
+        return 1
+    """
+    assert run(source, "noanyreturn") == ["4:AS104"]

@@ -67,6 +67,9 @@ def is_test_path(path: Path) -> bool:
     name = path.name
     if name.startswith("test_") or name.endswith("_test.py"):
         return True
+    if name == "conftest.py":
+        # A conftest holds the sanctioned patching of a test suite.
+        return True
     return any(part == "tests" for part in path.parts)
 
 

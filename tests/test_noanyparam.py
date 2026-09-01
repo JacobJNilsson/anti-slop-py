@@ -126,3 +126,23 @@ def test_star_args_of_a_forwarding_wrapper_reports() -> None:
         return func(*args, **kwargs)
     """
     assert run(source, "noanyparam") == ["7:AS103"]
+
+
+def test_string_annotation_reports() -> None:
+    source = """
+    from typing import Any
+
+    def load(payload: "Any") -> int:
+        return 1
+    """
+    assert run(source, "noanyparam") == ["4:AS103"]
+
+
+def test_any_inside_a_generic_stays_clean() -> None:
+    source = """
+    from typing import Any
+
+    def load(values: list[Any]) -> int:
+        return len(values)
+    """
+    assert run(source, "noanyparam") == []

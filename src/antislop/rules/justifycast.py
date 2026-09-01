@@ -35,8 +35,16 @@ class JustifyCast:
         for statement in ast.walk(ctx.tree):
             if not isinstance(statement, ast.stmt):
                 continue
-            for node in direct_expressions(statement):
-                if not isinstance(node, ast.Call) or not _is_cast(node, cast_names):
+            calls = [
+                node
+                for node in direct_expressions(statement)
+                if isinstance(node, ast.Call) and _is_cast(node, cast_names)
+            ]
+            inner = [call.args[1] for call in calls if _is_chained(call, cast_names)]
+            for node in calls:
+                if any(node is item for item in inner):
+                    # The report of the outer cast covers the chain, so
+                    # one chain gets one report.
                     continue
                 if _is_chained(node, cast_names):
                     yield node, CHAIN_MESSAGE

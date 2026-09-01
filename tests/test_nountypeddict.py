@@ -163,3 +163,33 @@ def test_boundary_module_setting_exempts_the_file() -> None:
     settings: dict[str, object] = {"boundary-modules": ["*/codec.py"]}
     assert run(source, "nountypeddict", "app/codec.py", settings) == []
     assert run(source, "nountypeddict", "app/service.py", settings) == ["4:AS102"]
+
+
+def test_string_annotation_reports() -> None:
+    source = """
+    from typing import Any
+
+    def load(payload: "dict[str, Any]") -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == ["4:AS102"]
+
+
+def test_dict_inside_a_generic_reports() -> None:
+    source = """
+    from typing import Any
+
+    def load() -> list[dict[str, Any]]:
+        return []
+    """
+    assert run(source, "nountypeddict") == ["4:AS102"]
+
+
+def test_dict_of_dicts_reports() -> None:
+    source = """
+    from typing import Any
+
+    def load(payload: dict[str, dict[str, Any]]) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == ["4:AS102"]

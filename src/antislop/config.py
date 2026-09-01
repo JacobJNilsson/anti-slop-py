@@ -21,6 +21,7 @@ from pathlib import Path
 class Config:
     enable: frozenset[str] = frozenset()
     disable: frozenset[str] = frozenset()
+    # The table of one rule holds the raw data of pyproject.toml.
     settings: dict[str, dict[str, object]] = field(default_factory=dict)
 
 

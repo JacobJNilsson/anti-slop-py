@@ -149,3 +149,28 @@ def test_ordinary_raise_stays_clean() -> None:
         raise ValueError(path)
     """
     assert run(source, "justifyexit") == []
+
+
+def test_exit_inside_an_except_handler_reports() -> None:
+    source = """
+    import sys
+
+    def load(path: str) -> bytes:
+        try:
+            return read(path)
+        except ValueError:
+            sys.exit(2)
+    """
+    assert run(source, "justifyexit") == ["8:AS109"]
+
+
+def test_exit_inside_a_match_case_reports() -> None:
+    source = """
+    import sys
+
+    def load(command: str) -> None:
+        match command:
+            case "stop":
+                sys.exit(3)
+    """
+    assert run(source, "justifyexit") == ["7:AS109"]
