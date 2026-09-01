@@ -269,3 +269,51 @@ def test_parameter_of_another_function_stays_clean() -> None:
             store(order)
     """
     assert run(source, "noredundantguard") == []
+
+
+def test_class_nested_in_a_function_does_not_answer_for_the_module_class() -> None:
+    source = """
+    class Order:
+        pass
+
+    def build() -> object:
+        class Order:
+            total: int
+        return Order()
+
+    def save(order: Order) -> None:
+        if hasattr(order, "total"):
+            store(order)
+    """
+    assert run(source, "noredundantguard") == []
+
+
+def test_module_class_still_answers_beside_a_nested_class_of_that_name() -> None:
+    source = """
+    class Order:
+        def __init__(self) -> None:
+            self.total = 0
+
+    def build() -> object:
+        class Order:
+            pass
+        return Order()
+
+    def save(order: Order) -> None:
+        if hasattr(order, "total"):
+            store(order)
+    """
+    assert run(source, "noredundantguard") == ["12:AS111"]
+
+
+def test_hasattr_on_an_init_constant_of_the_same_file_reports() -> None:
+    source = """
+    class Order:
+        def __init__(self) -> None:
+            self.total = 0
+
+    def save(order: Order) -> None:
+        if hasattr(order, "total"):
+            store(order)
+    """
+    assert run(source, "noredundantguard") == ["7:AS111"]

@@ -26,7 +26,6 @@ from antislop.nodes import (
     assigned_targets,
     direct_expressions,
     functions,
-    root_name,
     statements,
 )
 
@@ -78,10 +77,17 @@ def _typevars(tree: ast.Module) -> set[str]:
 
 
 def _class_attributes(tree: ast.Module) -> dict[str, set[str]]:
-    """Map each class of this file to the attributes that it declares."""
+    """Map each module level class of this file to the attributes it declares.
+
+    The map keys on the bare class name, and only an annotation of the
+    same file reads it. An annotation names the class that the module
+    binds, so the walk reads the direct children of the module. A class
+    inside a function or inside another class is a different type with
+    the same name, and it must not answer for the module level one.
+    """
     return {
         node.name: _declared(node)
-        for node in ast.walk(tree)
+        for node in tree.body
         if isinstance(node, ast.ClassDef)
     }
 
@@ -101,20 +107,25 @@ def _declared(node: ast.ClassDef) -> set[str]:
 
 
 def _self_attributes(function: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
-    """Return the attributes that __init__ writes from its own parameters."""
-    accepted = {argument.arg for argument in parameters(function.args)}
+    """Return the attributes that __init__ writes on self.
+
+    Every write of `self.name` declares an attribute, whatever the
+    value is. A constant, a call, and a parameter all give the object
+    the same attribute.
+    """
     names: set[str] = set()
     for node in ast.walk(function):
-        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Name):
-            continue
-        if node.value.id not in accepted:
-            continue
         names.update(
             target.attr
             for target in assigned_targets(node)
-            if isinstance(target, ast.Attribute) and root_name(target) == "self"
+            if isinstance(target, ast.Attribute) and _reads_self(target)
         )
     return names
+
+
+def _reads_self(target: ast.Attribute) -> bool:
+    """Report whether an attribute target writes directly on self."""
+    return isinstance(target.value, ast.Name) and target.value.id == "self"
 
 
 def _annotated_parameters(
