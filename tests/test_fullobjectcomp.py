@@ -48,13 +48,68 @@ def test_one_assert_of_joined_comparisons_reports() -> None:
     assert run(source, "fullobjectcomp", path=TEST_PATH) == ["4:AS112"]
 
 
-def test_nested_attribute_counts_on_its_root() -> None:
+def test_nested_attribute_counts_on_the_object_that_holds_it() -> None:
     source = """
     def test_order() -> None:
         order = build()
         assert order.buyer.name == "Ada"
         assert order.buyer.city == "Gothenburg"
         assert order.total == 10
+    """
+    assert run(source, "fullobjectcomp", path=TEST_PATH) == []
+
+
+def test_three_asserts_on_one_nested_object_report() -> None:
+    source = """
+    def test_order() -> None:
+        order = build()
+        assert order.buyer.name == "Ada"
+        assert order.buyer.city == "Gothenburg"
+        assert order.buyer.age == 42
+    """
+    assert run(source, "fullobjectcomp", path=TEST_PATH) == ["4:AS112"]
+
+
+def test_three_whole_fixture_asserts_stay_clean() -> None:
+    source = """
+    class OrderTest(TestCase):
+        def test_order(self) -> None:
+            assert self.alpha == 1
+            assert self.beta == 2
+            assert self.gamma == 3
+    """
+    assert run(source, "fullobjectcomp", path=TEST_PATH) == []
+
+
+def test_three_asserts_on_one_fixture_attribute_report() -> None:
+    source = """
+    class OrderTest(TestCase):
+        def test_order(self) -> None:
+            assert self.order.a == 1
+            assert self.order.b == 2
+            assert self.order.c == 3
+    """
+    assert run(source, "fullobjectcomp", path=TEST_PATH) == ["4:AS112"]
+
+
+def test_three_whole_fixture_assert_equal_calls_stay_clean() -> None:
+    source = """
+    class OrderTest(TestCase):
+        def test_order(self) -> None:
+            self.assertEqual(self.alpha, 1)
+            self.assertEqual(self.beta, 2)
+            self.assertEqual(self.gamma, 3)
+    """
+    assert run(source, "fullobjectcomp", path=TEST_PATH) == []
+
+
+def test_three_assert_equal_calls_on_one_fixture_attribute_report() -> None:
+    source = """
+    class OrderTest(TestCase):
+        def test_order(self) -> None:
+            self.assertEqual(self.order.a, 1)
+            self.assertEqual(self.order.b, 2)
+            self.assertEqual(self.order.c, 3)
     """
     assert run(source, "fullobjectcomp", path=TEST_PATH) == ["4:AS112"]
 

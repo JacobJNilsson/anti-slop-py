@@ -5,6 +5,15 @@ claim about the rest of the value. The test must compare the whole
 object against an expected instance. The rule counts the per-attribute
 assertions on one subject in one function and reports above a
 threshold. Test files only. See docs/spec/001-overview.md, rule P12.
+
+The subject of one assertion is the dotted path without the final
+attribute. An assert of `order.buyer.name` counts on the subject
+`order.buyer`, not on `order`. The two paths name two objects, and a
+claim about one states nothing about the other.
+
+The subject `self` never counts. In a test class `self` is the test
+case and `self.order` is one fixture. An assert of a whole fixture
+against an expected value is the shape that this rule asks for.
 """
 
 from __future__ import annotations
@@ -12,8 +21,9 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterator
 
+from antislop.annotations import dotted_name
 from antislop.engine import Context
-from antislop.nodes import functions, root_name, statements
+from antislop.nodes import functions, statements
 
 MESSAGE = (
     "the test asserts one attribute after another and claims nothing about the "
@@ -21,6 +31,7 @@ MESSAGE = (
 )
 DEFAULT_THRESHOLD = 3
 _EQUAL_ASSERTIONS = {"assertEqual", "assertEquals"}
+_TEST_CASE = "self"
 
 
 class FullObjectComp:
@@ -74,28 +85,31 @@ def _compared_attributes(test: ast.expr) -> list[str]:
 
 
 def _compared_attribute(test: ast.expr) -> str | None:
-    """Return the root name of an `a.x == value` comparison, from either side."""
+    """Return the subject of an `a.x == value` comparison, from either side."""
     if not isinstance(test, ast.Compare) or len(test.ops) != 1:
         return None
     if not isinstance(test.ops[0], ast.Eq):
         return None
-    left = _attribute_root(test.left)
-    return left if left is not None else _attribute_root(test.comparators[0])
+    left = _subject(test.left)
+    return left if left is not None else _subject(test.comparators[0])
 
 
 def _asserted_attribute(call: ast.Call) -> str | None:
-    """Return the root name of an assertEqual(a.x, value) call, from either side."""
+    """Return the subject of an assertEqual(a.x, value) call, from either side."""
     name = call.func.attr if isinstance(call.func, ast.Attribute) else None
     if isinstance(call.func, ast.Name):
         name = call.func.id
     if name not in _EQUAL_ASSERTIONS or not call.args:
         return None
-    found = [_attribute_root(argument) for argument in call.args[:2]]
-    return next((root for root in found if root is not None), None)
+    found = [_subject(argument) for argument in call.args[:2]]
+    return next((subject for subject in found if subject is not None), None)
 
 
-def _attribute_root(node: ast.expr) -> str | None:
-    """Return the base name of an attribute chain, and None for a plain name."""
+def _subject(node: ast.expr) -> str | None:
+    """Return the object that one attribute access reads, as a dotted path."""
     if not isinstance(node, ast.Attribute):
         return None
-    return root_name(node)
+    path = dotted_name(node.value)
+    if path is None or path == _TEST_CASE:
+        return None
+    return path
