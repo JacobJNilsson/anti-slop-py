@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from antislop.engine import Rule
 from antislop.rules.justifycast import JustifyCast
+from antislop.rules.justifyexit import JustifyExit
 from antislop.rules.justifyswallow import JustifySwallow
 from antislop.rules.noadhocisinstance import NoAdHocIsinstance
 from antislop.rules.noanydecl import NoAnyDecl
@@ -19,6 +20,7 @@ from antislop.rules.nountypeddict import NoUntypedDict
 
 ALL_RULES: list[Rule] = [
     JustifyCast(),
+    JustifyExit(),
     JustifySwallow(),
     NoAdHocIsinstance(),
     NoAnyDecl(),
