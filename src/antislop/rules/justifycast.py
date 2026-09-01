@@ -13,6 +13,7 @@ import ast
 from collections.abc import Iterator
 
 from antislop.engine import Context
+from antislop.nodes import direct_expressions
 
 MESSAGE = (
     "cast() has no justification comment. State the invariant in a comment "
@@ -34,17 +35,15 @@ class JustifyCast:
         for statement in ast.walk(ctx.tree):
             if not isinstance(statement, ast.stmt):
                 continue
-            for node in _direct_expressions(statement):
-                for call in ast.walk(node):
-                    if not _is_cast(call, cast_names):
-                        continue
-                    assert isinstance(call, ast.Call)
-                    if _is_chained(call, cast_names):
-                        yield call, CHAIN_MESSAGE
-                        continue
-                    if ctx.justified({call.lineno, statement.lineno}):
-                        continue
-                    yield call, MESSAGE
+            for node in direct_expressions(statement):
+                if not isinstance(node, ast.Call) or not _is_cast(node, cast_names):
+                    continue
+                if _is_chained(node, cast_names):
+                    yield node, CHAIN_MESSAGE
+                    continue
+                if ctx.justified({node.lineno, statement.lineno}):
+                    continue
+                yield node, MESSAGE
 
 
 def _cast_aliases(tree: ast.Module) -> set[str]:
@@ -82,10 +81,3 @@ def _is_chained(call: ast.Call, cast_names: set[str]) -> bool:
     if len(call.args) < 2:
         return False
     return _is_cast(call.args[1], cast_names)
-
-
-def _direct_expressions(statement: ast.stmt) -> Iterator[ast.expr]:
-    """Yield the expressions of a statement, not those of nested statements."""
-    for child in ast.iter_child_nodes(statement):
-        if isinstance(child, ast.expr):
-            yield child

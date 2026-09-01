@@ -15,6 +15,7 @@ import ast
 from collections.abc import Iterator
 
 from antislop.engine import Context
+from antislop.nodes import assigned_targets, direct_expressions, root_name
 
 MESSAGE = (
     "the assignment patches an attribute of an imported module or class. "
@@ -65,28 +66,16 @@ def _imported_names(tree: ast.Module) -> set[str]:
 def _patches_an_import(statement: ast.stmt, imported: set[str]) -> bool:
     """Report whether one statement writes to an attribute of an import."""
     return any(
-        isinstance(target, ast.Attribute) and _root_name(target) in imported
-        for target in _assigned_targets(statement)
+        isinstance(target, ast.Attribute) and root_name(target) in imported
+        for target in assigned_targets(statement)
     )
-
-
-def _assigned_targets(statement: ast.stmt) -> list[ast.expr]:
-    """Return what one assignment statement writes to."""
-    if isinstance(statement, ast.Assign):
-        return list(statement.targets)
-    if isinstance(statement, ast.AnnAssign | ast.AugAssign):
-        return [statement.target]
-    return []
 
 
 def _setattr_calls(statement: ast.stmt, imported: set[str]) -> Iterator[ast.Call]:
     """Yield the setattr calls of one statement that patch an import."""
-    for child in ast.iter_child_nodes(statement):
-        if not isinstance(child, ast.expr):
-            continue
-        for node in ast.walk(child):
-            if isinstance(node, ast.Call) and _patches_by_setattr(node, imported):
-                yield node
+    for node in direct_expressions(statement):
+        if isinstance(node, ast.Call) and _patches_by_setattr(node, imported):
+            yield node
 
 
 def _patches_by_setattr(call: ast.Call, imported: set[str]) -> bool:
@@ -99,13 +88,4 @@ def _patches_by_setattr(call: ast.Call, imported: set[str]) -> bool:
     if not isinstance(name, ast.Constant) or not isinstance(name.value, str):
         # A computed name is reflection. Rule P07 owns it.
         return False
-    return _root_name(call.args[0]) in imported
-
-
-def _root_name(node: ast.expr) -> str | None:
-    """Return the name at the root of an attribute path."""
-    if isinstance(node, ast.Attribute):
-        return _root_name(node.value)
-    if isinstance(node, ast.Name):
-        return node.id
-    return None
+    return root_name(call.args[0]) in imported

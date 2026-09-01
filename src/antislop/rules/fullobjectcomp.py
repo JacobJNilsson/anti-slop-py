@@ -13,6 +13,7 @@ import ast
 from collections.abc import Iterator
 
 from antislop.engine import Context
+from antislop.nodes import functions, root_name, statements
 
 MESSAGE = (
     "the test asserts one attribute after another and claims nothing about the "
@@ -31,15 +32,15 @@ class FullObjectComp:
         if not ctx.is_test:
             return
         threshold = _threshold(ctx.settings)
-        for function in _functions(ctx.tree):
+        for function in functions(ctx.tree):
             counted: dict[str, list[ast.stmt]] = {}
-            for statement in _statements(function.body):
+            for statement in statements(function.body):
                 subject = _subject(statement)
                 if subject is not None:
                     counted.setdefault(subject, []).append(statement)
-            for statements in counted.values():
-                if len(statements) >= threshold:
-                    yield statements[0], MESSAGE
+            for group in counted.values():
+                if len(group) >= threshold:
+                    yield group[0], MESSAGE
 
 
 # The settings hold raw pyproject data.
@@ -49,23 +50,6 @@ def _threshold(settings: dict[str, object]) -> int:
     if isinstance(configured, int) and not isinstance(configured, bool):
         return configured
     return DEFAULT_THRESHOLD
-
-
-def _functions(tree: ast.Module) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-            yield node
-
-
-def _statements(body: list[ast.stmt]) -> Iterator[ast.stmt]:
-    """Yield the statements of one function body, without nested scopes."""
-    for statement in body:
-        if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
-            continue
-        yield statement
-        for child in ast.iter_child_nodes(statement):
-            if isinstance(child, ast.stmt):
-                yield from _statements([child])
 
 
 def _subject(statement: ast.stmt) -> str | None:
@@ -83,7 +67,7 @@ def _compared_attribute(test: ast.expr) -> str | None:
         return None
     if not isinstance(test.ops[0], ast.Eq):
         return None
-    return _root_name(test.left)
+    return _attribute_root(test.left)
 
 
 def _asserted_attribute(call: ast.Call) -> str | None:
@@ -93,14 +77,11 @@ def _asserted_attribute(call: ast.Call) -> str | None:
         name = call.func.id
     if name not in _EQUAL_ASSERTIONS or not call.args:
         return None
-    return _root_name(call.args[0])
+    return _attribute_root(call.args[0])
 
 
-def _root_name(node: ast.expr) -> str | None:
-    """Return the base name of an attribute chain, such as a in a.b.c."""
+def _attribute_root(node: ast.expr) -> str | None:
+    """Return the base name of an attribute chain, and None for a plain name."""
     if not isinstance(node, ast.Attribute):
         return None
-    current: ast.expr = node
-    while isinstance(current, ast.Attribute):
-        current = current.value
-    return current.id if isinstance(current, ast.Name) else None
+    return root_name(node)

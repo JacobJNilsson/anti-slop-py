@@ -13,6 +13,7 @@ import ast
 from collections.abc import Iterator
 
 from antislop.engine import Context
+from antislop.nodes import root_name
 
 MATCH_MESSAGE = (
     "the match argument tests the wording of the error, and a reword breaks it. "
@@ -134,12 +135,4 @@ def _is_error_text(node: ast.expr, errors: set[str]) -> bool:
         return False
     if not isinstance(node.func, ast.Name) or node.func.id != "str":
         return False
-    return _root_name(node.args[0]) in errors
-
-
-def _root_name(node: ast.expr) -> str | None:
-    """Return the base name of a name or an attribute chain."""
-    current: ast.expr = node
-    while isinstance(current, ast.Attribute):
-        current = current.value
-    return current.id if isinstance(current, ast.Name) else None
+    return root_name(node.args[0]) in errors

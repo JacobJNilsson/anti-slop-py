@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Iterator
-from fnmatch import fnmatch
 
 from antislop.annotations import Annotations, definition_lines, parameters
+from antislop.boundary import at_boundary
 from antislop.engine import Context
 
 MESSAGE = (
@@ -31,7 +31,7 @@ class NoUntypedDict:
     default_on = True
 
     def check(self, ctx: Context) -> Iterator[tuple[ast.AST, str]]:
-        if _is_boundary(ctx):
+        if at_boundary(ctx):
             return
         annotations = Annotations(ctx.tree)
         for node in ast.walk(ctx.tree):
@@ -66,13 +66,3 @@ def _fields(
             continue
         if annotations.is_untyped_dict(statement.annotation):
             yield statement.annotation, MESSAGE
-
-
-def _is_boundary(ctx: Context) -> bool:
-    """Report whether the settings exempt this file as a decode boundary."""
-    patterns = ctx.settings.get("boundary-modules")
-    if not isinstance(patterns, list):
-        return False
-    return any(
-        isinstance(pattern, str) and fnmatch(ctx.path, pattern) for pattern in patterns
-    )

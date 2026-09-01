@@ -12,7 +12,9 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterator
 
+from antislop.annotations import dotted_name
 from antislop.engine import Context
+from antislop.nodes import direct_expressions, functions, statements
 
 ISINSTANCE_MESSAGE = (
     "the isinstance() check repeats the annotation of the parameter. Trust the "
@@ -32,18 +34,20 @@ class NoRedundantGuard:
 
     def check(self, ctx: Context) -> Iterator[tuple[ast.AST, str]]:
         typevars = _typevars(ctx.tree)
-        for function in _functions(ctx.tree):
-            annotations = _annotated_parameters(function, typevars)
-            if not annotations:
+        for function in functions(ctx.tree):
+            annotated = _annotated_parameters(function, typevars)
+            if not annotated:
                 continue
-            for statement in _statements(function.body):
-                for call in _direct_calls(statement):
-                    message = _redundant(call, annotations)
+            for statement in statements(function.body):
+                for node in direct_expressions(statement):
+                    if not isinstance(node, ast.Call):
+                        continue
+                    message = _redundant(node, annotated)
                     if message is None:
                         continue
-                    if ctx.justified({call.lineno, statement.lineno}):
+                    if ctx.justified({node.lineno, statement.lineno}):
                         continue
-                    yield call, message
+                    yield node, message
 
 
 def _typevars(tree: ast.Module) -> set[str]:
@@ -52,18 +56,12 @@ def _typevars(tree: ast.Module) -> set[str]:
     for node in ast.walk(tree):
         if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Call):
             continue
-        if _dotted_name(node.value.func) not in {"TypeVar", "typing.TypeVar"}:
+        if dotted_name(node.value.func) not in {"TypeVar", "typing.TypeVar"}:
             continue
         names.update(
             target.id for target in node.targets if isinstance(target, ast.Name)
         )
     return names
-
-
-def _functions(tree: ast.Module) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-            yield node
 
 
 def _annotated_parameters(
@@ -80,62 +78,26 @@ def _annotated_parameters(
         annotation = argument.annotation
         if annotation is None:
             continue
-        name = _dotted_name(annotation)
+        name = dotted_name(annotation)
         if name is None or name in _EMPTY_TYPES or name in typevars:
             continue
         found[argument.arg] = name
     return found
 
 
-def _statements(body: list[ast.stmt]) -> Iterator[ast.stmt]:
-    """Yield the statements of one function body, without nested scopes."""
-    for statement in body:
-        if isinstance(
-            statement, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
-        ):
-            continue
-        yield statement
-        for value in ast.iter_child_nodes(statement):
-            if isinstance(value, ast.stmt):
-                yield from _statements([value])
-
-
-def _direct_calls(statement: ast.stmt) -> Iterator[ast.Call]:
-    """Yield the calls of a statement, not those of nested statements."""
-    for child in ast.iter_child_nodes(statement):
-        if not isinstance(child, ast.expr):
-            continue
-        for node in ast.walk(child):
-            if isinstance(node, ast.Call):
-                yield node
-
-
-def _redundant(call: ast.Call, annotations: dict[str, str]) -> str | None:
+def _redundant(call: ast.Call, annotated: dict[str, str]) -> str | None:
     """Return the message for a guard that the annotation already answers."""
     if not isinstance(call.func, ast.Name) or len(call.args) != 2:
         return None
     subject, second = call.args
     if not isinstance(subject, ast.Name):
         return None
-    annotation = annotations.get(subject.id)
+    annotation = annotated.get(subject.id)
     if annotation is None:
         return None
-    if call.func.id == "isinstance" and _dotted_name(second) == annotation:
+    if call.func.id == "isinstance" and dotted_name(second) == annotation:
         return ISINSTANCE_MESSAGE
     names_attribute = isinstance(second, ast.Constant) and isinstance(second.value, str)
     if call.func.id == "hasattr" and names_attribute:
         return HASATTR_MESSAGE
     return None
-
-
-def _dotted_name(node: ast.expr) -> str | None:
-    """Return the dotted name of a plain Name or Attribute expression."""
-    parts: list[str] = []
-    current: ast.expr = node
-    while isinstance(current, ast.Attribute):
-        parts.append(current.attr)
-        current = current.value
-    if not isinstance(current, ast.Name):
-        return None
-    parts.append(current.id)
-    return ".".join(reversed(parts))

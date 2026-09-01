@@ -1,8 +1,8 @@
 """The boundary-modules setting.
 
-Rules P06 and P07 permit dynamic code in the modules that decode raw
-input or load plugins. The setting holds glob patterns. The rule
-matches every pattern against the path of the file.
+Rules P02, P06, and P07 permit a wide type or dynamic code in the
+modules that decode raw input or load plugins. The setting holds glob
+patterns. The rule matches every pattern against the path of the file.
 """
 
 from __future__ import annotations

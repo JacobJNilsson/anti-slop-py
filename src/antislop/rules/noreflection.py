@@ -15,6 +15,7 @@ from collections.abc import Iterator
 
 from antislop.boundary import at_boundary
 from antislop.engine import Context
+from antislop.nodes import assigned_targets
 
 _ATTRIBUTE_BUILTINS = frozenset({"getattr", "setattr", "delattr"})
 
@@ -92,19 +93,10 @@ def _subscript_report(node: ast.Subscript) -> str | None:
 
 
 def _write_report(node: ast.AST) -> str | None:
-    for target in _assigned_targets(node):
+    for target in assigned_targets(node):
         if _touches_instance_dict(target):
             return DICT_MESSAGE
     return None
-
-
-def _assigned_targets(node: ast.AST) -> list[ast.expr]:
-    """Return what one assignment statement writes to."""
-    if isinstance(node, ast.Assign):
-        return list(node.targets)
-    if isinstance(node, ast.AnnAssign | ast.AugAssign):
-        return [node.target]
-    return []
 
 
 def _touches_instance_dict(target: ast.expr) -> bool:

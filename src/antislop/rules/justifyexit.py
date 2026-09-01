@@ -12,7 +12,9 @@ import ast
 from collections.abc import Iterator
 from fnmatch import fnmatchcase
 
+from antislop.annotations import dotted_name
 from antislop.engine import Context
+from antislop.nodes import direct_expressions
 
 MESSAGE = (
     "this exit stops the process of the caller. State why the process cannot "
@@ -106,14 +108,7 @@ def _is_entry_point(
 def _decorator_name(decorator: ast.expr) -> str | None:
     """Return the dotted name of a decorator, with any call stripped."""
     node = decorator.func if isinstance(decorator, ast.Call) else decorator
-    parts: list[str] = []
-    while isinstance(node, ast.Attribute):
-        parts.append(node.attr)
-        node = node.value
-    if not isinstance(node, ast.Name):
-        return None
-    parts.append(node.id)
-    return ".".join(reversed(parts))
+    return dotted_name(node)
 
 
 def _is_main_test(test: ast.expr) -> bool:
@@ -142,12 +137,9 @@ def _exit_nodes(
     if isinstance(statement, ast.Raise) and _raises_system_exit(statement):
         yield statement
         return
-    for child in ast.iter_child_nodes(statement):
-        if not isinstance(child, ast.expr):
-            continue
-        for node in ast.walk(child):
-            if isinstance(node, ast.Call) and _is_exit_call(node, modules, exits):
-                yield node
+    for node in direct_expressions(statement):
+        if isinstance(node, ast.Call) and _is_exit_call(node, modules, exits):
+            yield node
 
 
 def _raises_system_exit(statement: ast.Raise) -> bool:

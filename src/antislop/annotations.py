@@ -19,7 +19,6 @@ import sys
 
 TYPING_MODULES = frozenset({"typing", "typing_extensions"})
 _MAPPING_MODULES = TYPING_MODULES | {"collections.abc"}
-_ALIAS_DEPTH = 8
 
 
 def dotted_name(node: ast.expr) -> str | None:
@@ -64,13 +63,12 @@ class Annotations:
     def resolve(self, node: ast.expr) -> ast.expr:
         """Return the type that an annotation names, through its aliases."""
         seen: set[str] = set()
-        for _ in range(_ALIAS_DEPTH):
+        while True:
             name = dotted_name(node)
             if name is None or name in seen or name not in self.aliases:
                 return node
             seen.add(name)
             node = self.aliases[name]
-        return node
 
     def is_any(self, node: ast.expr) -> bool:
         """Report whether an annotation means typing.Any."""
