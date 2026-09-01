@@ -20,6 +20,7 @@ import sys
 
 TYPING_MODULES = frozenset({"typing", "typing_extensions"})
 _MAPPING_MODULES = TYPING_MODULES | {"collections.abc"}
+_MAPPING_NAMES = ("Mapping", "MutableMapping")
 
 
 def dotted_name(node: ast.expr) -> str | None:
@@ -58,14 +59,21 @@ class Annotations:
     def __init__(self, tree: ast.Module) -> None:
         self.any_names = _imported(tree, "Any", TYPING_MODULES)
         self.dict_names = _imported(tree, "Dict", TYPING_MODULES) | {"dict"}
-        self.mapping_names = _imported(tree, "Mapping", _MAPPING_MODULES)
+        self.mapping_names = frozenset(
+            name
+            for simple in _MAPPING_NAMES
+            for name in _imported(tree, simple, _MAPPING_MODULES)
+        )
         self.aliases = _aliases(tree)
+        # One string annotation must always give one tree, because the
+        # cycle guard of _members compares by identity.
+        self._unquoted: dict[ast.Constant, ast.expr] = {}
 
     def resolve(self, node: ast.expr) -> ast.expr:
         """Return the type that an annotation names, through its aliases."""
         seen: set[str] = set()
         while True:
-            node = _unquote(node)
+            node = self._unquote(node)
             name = dotted_name(node)
             if name is None or name in seen or name not in self.aliases:
                 return node
@@ -141,16 +149,31 @@ class Annotations:
 
     def _is_mapping_name(self, name: str) -> bool:
         return name in self.mapping_names or name in {
-            f"{module}.Mapping" for module in _MAPPING_MODULES
+            f"{module}.{simple}"
+            for module in _MAPPING_MODULES
+            for simple in _MAPPING_NAMES
         }
 
+    def _unquote(self, node: ast.expr) -> ast.expr:
+        """Return the annotation that a string annotation holds.
 
-def _unquote(node: ast.expr) -> ast.expr:
-    """Return the annotation that a string annotation holds."""
-    if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
-        return node
+        A recursive alias such as Json = "dict[str, Json]" comes back
+        to the same string. The cache keeps one tree per string, so the
+        walk of _members ends at the tree it saw before.
+        """
+        if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+            return node
+        cached = self._unquoted.get(node)
+        if cached is None:
+            cached = _parse_annotation(node)
+            self._unquoted[node] = cached
+        return cached
+
+
+def _parse_annotation(node: ast.Constant) -> ast.expr:
+    """Parse the code that one string annotation holds."""
     try:
-        parsed = ast.parse(node.value, mode="eval")
+        parsed = ast.parse(str(node.value), mode="eval")
     except SyntaxError:
         # A string that does not parse is the report of the type
         # checker, not of this linter.

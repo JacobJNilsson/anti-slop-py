@@ -193,3 +193,79 @@ def test_dict_of_dicts_reports() -> None:
         return None
     """
     assert run(source, "nountypeddict") == ["4:AS102"]
+
+
+def test_mutable_mapping_with_any_values_reports() -> None:
+    source = """
+    from collections.abc import MutableMapping
+    from typing import Any
+
+    def load(payload: MutableMapping[str, Any]) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == ["5:AS102"]
+
+
+def test_recursive_string_alias_stays_clean() -> None:
+    source = """
+    from typing import TypeAlias
+
+    Json: TypeAlias = "dict[str, Json]"
+
+    def load(payload: Json) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == []
+
+
+def test_recursive_assigned_string_alias_stays_clean() -> None:
+    source = """
+    Json = "dict[str, Json]"
+
+    def load(payload: Json) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == []
+
+
+def test_recursive_alias_with_a_quoted_member_stays_clean() -> None:
+    source = """
+    Json = dict[str, "Json"]
+
+    def load(payload: Json) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == []
+
+
+def test_recursive_type_statement_stays_clean() -> None:
+    source = """
+    type Json = dict[str, Json]
+
+    def load(payload: Json) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == []
+
+
+def test_two_aliases_that_name_each_other_stay_clean() -> None:
+    source = """
+    A = "B"
+    B = "A"
+
+    def load(payload: A) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == []
+
+
+def test_recursive_alias_still_resolves_its_untyped_member() -> None:
+    source = """
+    from typing import Any, TypeAlias
+
+    Json: TypeAlias = "dict[str, Json] | dict[str, Any]"
+
+    def load(payload: Json) -> None:
+        return None
+    """
+    assert run(source, "nountypeddict") == ["6:AS102"]
