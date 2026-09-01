@@ -16,7 +16,7 @@ import ast
 from collections.abc import Iterator
 from fnmatch import fnmatch
 
-from antislop.annotations import Annotations, definition_lines
+from antislop.annotations import Annotations, definition_lines, parameters
 from antislop.engine import Context
 
 MESSAGE = (
@@ -49,7 +49,8 @@ def _signature(
     """Yield the untyped dicts of one signature."""
     if ctx.justified(definition_lines(node)):
         return
-    for annotation in [*_parameters(node.args), node.returns]:
+    annotated = [argument.annotation for argument in parameters(node.args)]
+    for annotation in [*annotated, node.returns]:
         if annotation is not None and annotations.is_untyped_dict(annotation):
             yield annotation, MESSAGE
 
@@ -65,15 +66,6 @@ def _fields(
             continue
         if annotations.is_untyped_dict(statement.annotation):
             yield statement.annotation, MESSAGE
-
-
-def _parameters(args: ast.arguments) -> list[ast.expr | None]:
-    """Return the annotation of every parameter of one signature."""
-    named = [*args.posonlyargs, *args.args, *args.kwonlyargs]
-    starred = [args.vararg, args.kwarg]
-    return [argument.annotation for argument in named] + [
-        argument.annotation for argument in starred if argument is not None
-    ]
 
 
 def _is_boundary(ctx: Context) -> bool:

@@ -32,6 +32,17 @@ def dotted_name(node: ast.expr) -> str | None:
     return None
 
 
+def parameters(args: ast.arguments) -> list[ast.arg]:
+    """Return every parameter of one signature, starred ones included."""
+    starred = [args.vararg, args.kwarg]
+    return [
+        *args.posonlyargs,
+        *args.args,
+        *args.kwonlyargs,
+        *[argument for argument in starred if argument is not None],
+    ]
+
+
 def definition_lines(node: ast.AST) -> set[int]:
     """Return the lines that a justification comment may sit above."""
     lines = {getattr(node, "lineno", 1)}
