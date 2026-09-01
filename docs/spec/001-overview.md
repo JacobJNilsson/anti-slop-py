@@ -107,7 +107,9 @@ this rule does not duplicate them.
 nothing. Data with known keys belongs in a dataclass, a TypedDict, or a
 validated model. The rule flags parameters, returns, class attributes,
 and dataclass fields. A boundary-modules setting exempts the modules
-that decode raw JSON. No mainstream linter has this rule (`ANN401`
+that decode raw JSON. A comment directly above the definition, naming
+the source that fixes the shape, is the escape. No mainstream linter
+has this rule (`ANN401`
 comes closest and only sees `Any` itself).
 
 ### P03 `noanyparam`: no `Any` or `object` parameters (opt-in)
@@ -124,8 +126,10 @@ not both.
 
 ### P04 `noanyreturn`: no `Any` or `object` returns (error)
 
-A declared `-> Any` or `-> object` forces every caller to guess. Return the concrete
-type, a Protocol the caller consumes, or a TypeVar. mypy
+A declared `-> Any` or `-> object` forces every caller to guess. Return the
+concrete type, a Protocol the caller consumes, or a TypeVar. A comment
+directly above the definition, naming the API that fixes the
+signature, is the escape. mypy
 `--warn-return-any` covers inferred `Any` leaking out. This rule covers
 the declared half.
 
@@ -171,13 +175,13 @@ upstream bug earns a justification comment.
 point stop somebody else's process. The author must state why the
 process cannot continue, in a comment directly above the call, or raise
 an ordinary exception. Exempt: `main()` functions, `__main__` blocks,
-and functions under CLI decorators (`click`, `typer`, configurable). No
-mainstream linter has this rule.
+functions under CLI decorators (`click`, `typer`, configurable), and
+test files. No mainstream linter has this rule.
 
 ### P10 `justifyswallow`: require a comment to discard an exception (error)
 
 An except handler that swallows (body is only `pass`, `...`,
-`continue`, or `return <constant>`) hides a failure and returns a
+`continue`, `break`, or `return <constant>`) hides a failure and returns a
 guess. This is the single most measured AI pattern (error masking
 up 47% in GitClear's data). The author must state why ignoring the
 error is correct, in a comment directly above or as the first line of
@@ -192,7 +196,8 @@ stay with `E722` and `BLE001`. Enable all three.
 tells the reader the author did not trust the annotation, and it keeps
 dead branches alive. Phase 1 catches the AST-visible core: a guard on a
 parameter tested against its own annotation in the same function. The
-full rule resolves types through the checker bridge. This is the
+full rule resolves types through the checker bridge. No comment
+clears a report. Delete the guard, or fix the annotation. This is the
 flagship anti-AI rule. No existing linter has it.
 
 ### P12 `fullobjectcomp`: compare the whole object (opt-in)
@@ -216,7 +221,8 @@ stays possible through a justification comment.
 A variable or attribute annotated `Any` or `object` whose initializer
 has a concrete type throws away evidence at the declaration:
 `x: Any = Config()`. Delete the annotation and keep the inferred type,
-or name the concrete type. Phase 1 catches initializers whose type is
+or name the concrete type. A comment directly above the statement,
+naming the API that needs the wide type, is the escape. Phase 1 catches initializers whose type is
 syntactically evident (a literal, a constructor call). The type bridge
 extends the check to every initializer. This translates the upstream
 rule `no-known-value-widening`, which the Go project folded into a
