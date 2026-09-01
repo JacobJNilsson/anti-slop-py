@@ -15,6 +15,7 @@ from antislop.rules.noanydecl import NoAnyDecl
 from antislop.rules.noanyparam import NoAnyParam
 from antislop.rules.noanyreturn import NoAnyReturn
 from antislop.rules.nomonkeypatch import NoMonkeyPatch
+from antislop.rules.noredundantguard import NoRedundantGuard
 from antislop.rules.noreflection import NoReflection
 from antislop.rules.nountypeddict import NoUntypedDict
 
@@ -27,6 +28,7 @@ ALL_RULES: list[Rule] = [
     NoAnyParam(),
     NoAnyReturn(),
     NoMonkeyPatch(),
+    NoRedundantGuard(),
     NoReflection(),
     NoUntypedDict(),
 ]
