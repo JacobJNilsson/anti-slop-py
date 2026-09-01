@@ -21,13 +21,86 @@ def test_dotted_annotation_reports() -> None:
     assert run(source, "noredundantguard") == ["3:AS111"]
 
 
-def test_hasattr_on_annotated_parameter_reports() -> None:
+def test_hasattr_on_an_opaque_annotation_stays_clean() -> None:
     source = """
     def save(order: Order) -> None:
         if hasattr(order, "total"):
             store(order)
     """
-    assert run(source, "noredundantguard") == ["3:AS111"]
+    assert run(source, "noredundantguard") == []
+
+
+def test_hasattr_on_a_class_of_the_same_file_reports() -> None:
+    source = """
+    class Order:
+        total: int
+
+    def save(order: Order) -> None:
+        if hasattr(order, "total"):
+            store(order)
+    """
+    assert run(source, "noredundantguard") == ["6:AS111"]
+
+
+def test_hasattr_on_a_method_of_the_same_file_reports() -> None:
+    source = """
+    class Order:
+        def total(self) -> int:
+            return 1
+
+    def save(order: Order) -> None:
+        if hasattr(order, "total"):
+            store(order)
+    """
+    assert run(source, "noredundantguard") == ["7:AS111"]
+
+
+def test_hasattr_on_an_init_parameter_of_the_same_file_reports() -> None:
+    source = """
+    class Order:
+        def __init__(self, total: int) -> None:
+            self.total = total
+
+    def save(order: Order) -> None:
+        if hasattr(order, "total"):
+            store(order)
+    """
+    assert run(source, "noredundantguard") == ["7:AS111"]
+
+
+def test_hasattr_that_the_local_class_does_not_declare_stays_clean() -> None:
+    source = """
+    class Order:
+        total: int
+
+    def save(order: Order) -> None:
+        if hasattr(order, "discount"):
+            store(order)
+    """
+    assert run(source, "noredundantguard") == []
+
+
+def test_hasattr_on_an_imported_annotation_stays_clean() -> None:
+    source = """
+    from models import Order
+
+    def save(order: Order) -> None:
+        if hasattr(order, "total"):
+            store(order)
+    """
+    assert run(source, "noredundantguard") == []
+
+
+def test_hasattr_on_a_node_of_another_library_stays_clean() -> None:
+    source = """
+    import ast
+
+    def line(node: ast.AST) -> int:
+        if hasattr(node, "lineno"):
+            return node.lineno
+        return 0
+    """
+    assert run(source, "noredundantguard") == []
 
 
 def test_method_parameter_reports() -> None:
@@ -156,6 +229,32 @@ def test_isinstance_tuple_stays_clean() -> None:
     def save(order: Order) -> None:
         if isinstance(order, (Order, Draft)):
             store(order)
+    """
+    assert run(source, "noredundantguard") == []
+
+
+def test_comprehension_that_rebinds_the_name_stays_clean() -> None:
+    source = """
+    def save(value: int) -> None:
+        store([value for value in values if isinstance(value, int)])
+    """
+    assert run(source, "noredundantguard") == []
+
+
+def test_lambda_that_rebinds_the_name_stays_clean() -> None:
+    source = """
+    def save(value: int) -> None:
+        store(lambda value: isinstance(value, int))
+    """
+    assert run(source, "noredundantguard") == []
+
+
+def test_assignment_that_rebinds_the_name_stays_clean() -> None:
+    source = """
+    def save(value: int) -> None:
+        value = parse(value)
+        if isinstance(value, int):
+            store(value)
     """
     assert run(source, "noredundantguard") == []
 
