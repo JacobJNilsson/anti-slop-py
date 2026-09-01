@@ -118,8 +118,9 @@ An `Any` parameter moves parsing from the boundary into the callee. An
 `object` parameter forces an `isinstance` on the callee for the same
 reason, so the rule treats both as the same absence of a contract.
 Accept a named domain type. TypeVars and Protocols carry evidence and
-are fine. `**kwargs: Any` forwarded verbatim to one callee is the
-decorator idiom and is exempt. A justification comment naming the API
+are fine. A function that forwards its `*args` and
+`**kwargs` verbatim to one callee is the decorator idiom, and both
+parameters are exempt there. A justification comment naming the API
 that fixes the signature is the escape. This rule supersedes ruff
 `ANN401` by adding the escape and the forwarding exemption. Use one,
 not both.
@@ -194,9 +195,11 @@ stay with `E722` and `BLE001`. Enable all three.
 `isinstance(x, T)` or `hasattr(x, "name")` where the declared type of
 `x` already answers the question is defensiveness without evidence. It
 tells the reader the author did not trust the annotation, and it keeps
-dead branches alive. Phase 1 catches the AST-visible core: a guard on a
-parameter tested against its own annotation in the same function. The
-full rule resolves types through the checker bridge. No comment
+dead branches alive. Phase 1 catches the AST-visible core: a guard on a parameter tested against its own annotation in the
+same function. The hasattr check reads only an annotation that names a
+class of the same file, and it fires when that class declares the
+attribute. Any other annotation waits for the checker bridge. The full
+rule resolves types through the checker bridge. No comment
 clears a report. Delete the guard, or fix the annotation. This is the
 flagship anti-AI rule. No existing linter has it.
 
