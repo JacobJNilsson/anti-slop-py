@@ -12,6 +12,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterator
 
+from antislop.annotations import TYPING_MODULES, dotted_name, typing_aliases
 from antislop.engine import Context
 from antislop.nodes import direct_expressions
 
@@ -31,22 +32,25 @@ class JustifyCast:
     default_on = True
 
     def check(self, ctx: Context) -> Iterator[tuple[ast.AST, str]]:
-        cast_names = _cast_aliases(ctx.tree)
+        names = _cast_aliases(ctx.tree)
+        modules = typing_aliases(ctx.tree)
         for statement in ast.walk(ctx.tree):
             if not isinstance(statement, ast.stmt):
                 continue
             calls = [
                 node
                 for node in direct_expressions(statement)
-                if isinstance(node, ast.Call) and _is_cast(node, cast_names)
+                if isinstance(node, ast.Call) and _is_cast(node, names, modules)
             ]
-            inner = [call.args[1] for call in calls if _is_chained(call, cast_names)]
+            inner = [
+                call.args[1] for call in calls if _is_chained(call, names, modules)
+            ]
             for node in calls:
                 if any(node is item for item in inner):
                     # The report of the outer cast covers the chain, so
                     # one chain gets one report.
                     continue
-                if _is_chained(node, cast_names):
+                if _is_chained(node, names, modules):
                     yield node, CHAIN_MESSAGE
                     continue
                 if ctx.justified({node.lineno, statement.lineno}):
@@ -55,13 +59,10 @@ class JustifyCast:
 
 
 def _cast_aliases(tree: ast.Module) -> set[str]:
-    """Collect the local names that mean typing.cast."""
+    """Collect the local names that a from import binds to typing.cast."""
     names: set[str] = set()
     for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.module in {
-            "typing",
-            "typing_extensions",
-        }:
+        if isinstance(node, ast.ImportFrom) and node.module in TYPING_MODULES:
             names.update(
                 alias.asname or alias.name
                 for alias in node.names
@@ -70,22 +71,22 @@ def _cast_aliases(tree: ast.Module) -> set[str]:
     return names
 
 
-def _is_cast(node: ast.AST, cast_names: set[str]) -> bool:
+def _is_cast(node: ast.AST, names: set[str], modules: frozenset[str]) -> bool:
+    """Report whether a node calls typing.cast, under any name it has here."""
     if not isinstance(node, ast.Call):
         return False
     func = node.func
     if isinstance(func, ast.Name):
-        return func.id in cast_names
+        return func.id in names
     return (
         isinstance(func, ast.Attribute)
         and func.attr == "cast"
-        and isinstance(func.value, ast.Name)
-        and func.value.id in {"typing", "typing_extensions"}
+        and dotted_name(func.value) in modules
     )
 
 
-def _is_chained(call: ast.Call, cast_names: set[str]) -> bool:
+def _is_chained(call: ast.Call, names: set[str], modules: frozenset[str]) -> bool:
     """Report whether the value argument of a cast is itself a cast."""
     if len(call.args) < 2:
         return False
-    return _is_cast(call.args[1], cast_names)
+    return _is_cast(call.args[1], names, modules)

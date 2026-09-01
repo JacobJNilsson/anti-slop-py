@@ -122,3 +122,13 @@ def test_chained_cast_reports_once() -> None:
         return cast(int, cast(object, raw))
     """
     assert run(source, "justifycast") == ["5:AS101"]
+
+
+def test_aliased_typing_module_reports() -> None:
+    source = """
+    import typing as t
+
+    def load(raw: object) -> int:
+        return t.cast(int, raw)
+    """
+    assert run(source, "justifycast") == ["5:AS101"]

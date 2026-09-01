@@ -55,7 +55,11 @@ def _is_evident(value: ast.expr) -> bool:
         return value.value is not None and value.value is not Ellipsis
     if isinstance(value, ast.List | ast.Dict | ast.Set | ast.Tuple | ast.JoinedStr):
         return True
-    if isinstance(value, ast.ListComp | ast.SetComp | ast.DictComp):
+    # A generator expression is a comprehension, and it gives a
+    # Generator in the same way that a list comprehension gives a list.
+    if isinstance(
+        value, ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp
+    ):
         return True
     if isinstance(value, ast.UnaryOp):
         # A sign or a not over a constant keeps the type of the constant.

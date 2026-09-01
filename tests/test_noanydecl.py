@@ -132,3 +132,12 @@ def test_string_annotation_reports() -> None:
     limit: "Any" = 5
     """
     assert run(source, "noanydecl") == ["4:AS114"]
+
+
+def test_generator_expression_initializer_reports() -> None:
+    source = """
+    from typing import Any
+
+    names: Any = (item.name for item in records)
+    """
+    assert run(source, "noanydecl") == ["4:AS114"]

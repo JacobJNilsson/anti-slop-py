@@ -53,6 +53,25 @@ def definition_lines(node: ast.AST) -> set[int]:
     return lines
 
 
+def typing_aliases(tree: ast.Module) -> frozenset[str]:
+    """Collect the module names that stand for typing in one file.
+
+    An `import typing as t` makes `t.Any` the same annotation as
+    `typing.Any`. The literal names stay in the set, because a file
+    may hold the dotted form without an import that this walk sees.
+    """
+    found = set(TYPING_MODULES)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Import):
+            continue
+        found.update(
+            alias.asname or alias.name
+            for alias in node.names
+            if alias.name in TYPING_MODULES
+        )
+    return frozenset(found)
+
+
 class Annotations:
     """The imported names and the type aliases of one file."""
 
@@ -64,6 +83,8 @@ class Annotations:
             for simple in _MAPPING_NAMES
             for name in _imported(tree, simple, _MAPPING_MODULES)
         )
+        self.typing_modules = typing_aliases(tree)
+        self.mapping_modules = self.typing_modules | {"collections.abc"}
         self.aliases = _aliases(tree)
         # One string annotation must always give one tree, because the
         # cycle guard of _members compares by identity.
@@ -86,7 +107,7 @@ class Annotations:
         if name is None:
             return False
         return name in self.any_names or name in {
-            f"{module}.Any" for module in TYPING_MODULES
+            f"{module}.Any" for module in self.typing_modules
         }
 
     def is_object(self, node: ast.expr) -> bool:
@@ -144,13 +165,13 @@ class Annotations:
 
     def _is_dict_name(self, name: str) -> bool:
         return name in self.dict_names or name in {
-            f"{module}.Dict" for module in TYPING_MODULES
+            f"{module}.Dict" for module in self.typing_modules
         }
 
     def _is_mapping_name(self, name: str) -> bool:
         return name in self.mapping_names or name in {
             f"{module}.{simple}"
-            for module in _MAPPING_MODULES
+            for module in self.mapping_modules
             for simple in _MAPPING_NAMES
         }
 
@@ -202,7 +223,16 @@ def _imported(tree: ast.Module, name: str, modules: frozenset[str]) -> frozenset
 
 
 def _aliases(tree: ast.Module) -> dict[str, ast.expr]:
-    """Collect the module level type aliases of one file."""
+    """Collect the module level names that stand for a type.
+
+    The walk records every plain assignment to a name, not only the
+    three alias forms of the spec. A plain assignment gives no marker
+    that tells an alias from a value, so the map holds both.
+
+    That is safe, because only resolve() reads the map, and only an
+    annotation reaches resolve(). A value such as COUNT = 3 resolves
+    to a number, and no rule reports a number.
+    """
     found: dict[str, ast.expr] = {}
     for node in tree.body:
         if isinstance(node, ast.Assign) and node.value is not None:

@@ -76,7 +76,7 @@ def test_comment_above_def_justifies() -> None:
     assert run(source, "noanyparam") == []
 
 
-def test_forwarded_kwargs_stay_clean() -> None:
+def test_a_lone_forwarded_kwargs_reports() -> None:
     source = """
     from collections.abc import Callable
     from typing import Any
@@ -84,10 +84,21 @@ def test_forwarded_kwargs_stay_clean() -> None:
     def wrap(func: Callable[..., int], **kwargs: Any) -> int:
         return func(**kwargs)
     """
-    assert run(source, "noanyparam") == []
+    assert run(source, "noanyparam") == ["5:AS103"]
 
 
-def test_kwargs_forwarded_twice_report() -> None:
+def test_a_lone_forwarded_star_args_reports() -> None:
+    source = """
+    from collections.abc import Callable
+    from typing import Any
+
+    def wrap(func: Callable[..., int], *args: Any) -> int:
+        return func(*args)
+    """
+    assert run(source, "noanyparam") == ["5:AS103"]
+
+
+def test_the_pair_forwarded_twice_reports() -> None:
     source = """
     from collections.abc import Callable
     from typing import Any
@@ -95,12 +106,13 @@ def test_kwargs_forwarded_twice_report() -> None:
     def wrap(
         first: Callable[..., int],
         second: Callable[..., int],
+        *args: Any,
         **kwargs: Any,
     ) -> int:
-        first(**kwargs)
-        return second(**kwargs)
+        first(*args, **kwargs)
+        return second(*args, **kwargs)
     """
-    assert run(source, "noanyparam") == ["8:AS103"]
+    assert run(source, "noanyparam") == ["8:AS103", "9:AS103"]
 
 
 def test_kwargs_read_but_not_forwarded_report() -> None:
@@ -160,7 +172,7 @@ def test_star_args_that_the_wrapper_keeps_report() -> None:
     ) -> int:
         return func(args, **kwargs)
     """
-    assert run(source, "noanyparam") == ["7:AS103"]
+    assert run(source, "noanyparam") == ["7:AS103", "8:AS103"]
 
 
 def test_string_annotation_reports() -> None:
@@ -181,3 +193,13 @@ def test_any_inside_a_generic_stays_clean() -> None:
         return len(values)
     """
     assert run(source, "noanyparam") == []
+
+
+def test_any_through_an_aliased_typing_module_reports() -> None:
+    source = """
+    import typing as t
+
+    def load(payload: t.Any) -> int:
+        return 1
+    """
+    assert run(source, "noanyparam") == ["4:AS103"]
