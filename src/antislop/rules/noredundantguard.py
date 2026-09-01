@@ -1,10 +1,7 @@
 """Rule P11 noredundantguard (AS111).
 
 A guard that repeats the annotation of a parameter is defensiveness
-without evidence. It tells the reader that the author did not trust the
-annotation, and it keeps a dead branch alive. Phase 1 catches the part
-the AST shows: a guard on a parameter tested against its own
-annotation in the same function.
+without evidence.
 
 The hasattr half reads only an annotation that names a class of the
 same file. It reports when that class declares the attribute. Every
@@ -30,11 +27,11 @@ from antislop.nodes import (
 )
 
 ISINSTANCE_MESSAGE = (
-    "the isinstance() check repeats the annotation of the parameter. Trust the "
+    "the isinstance() guard repeats the annotation of the parameter. Trust the "
     "annotation and delete the guard, or annotate the wider type you accept."
 )
 HASATTR_MESSAGE = (
-    "the hasattr() check doubts the annotation of the parameter. Trust the "
+    "the hasattr() guard doubts the annotation of the parameter. Trust the "
     "annotation and delete the guard, or accept a Protocol that holds the attribute."
 )
 _EMPTY_TYPES = {"Any", "object", "typing.Any"}
@@ -80,10 +77,9 @@ def _class_attributes(tree: ast.Module) -> dict[str, set[str]]:
     """Map each module level class of this file to the attributes it declares.
 
     The map keys on the bare class name, and only an annotation of the
-    same file reads it. An annotation names the class that the module
-    binds, so the walk reads the direct children of the module. A class
-    inside a function or inside another class is a different type with
-    the same name, and it must not answer for the module level one.
+    same file reads it. The walk reads the direct children of the
+    module. A class inside a function or a class is a different type
+    with the same name.
     """
     return {
         node.name: _declared(node)

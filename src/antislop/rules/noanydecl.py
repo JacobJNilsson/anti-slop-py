@@ -5,14 +5,13 @@ evidence away at the declaration. The author deletes the annotation and
 keeps the inferred type, or names the concrete type.
 
 Phase 1 reads the initializers whose type is evident from the syntax.
-These are a literal, a sign over a literal, a display of a list, dict,
-set, or tuple, a comprehension, and an f-string. A call of a name with
-a capital first letter is also evident,
-because that is the constructor convention. A None or an Ellipsis
-initializer states no value, so the rule skips it. A lower case call is
-opaque until the type bridge of phase 2 arrives. A module level alias
-of Any is no loophole, but a cross module alias is out of scope for
-phase 1. A comment above the statement justifies one declaration.
+These are a literal, a unary operator over a literal, a display of a
+list, dict, set, or tuple, a comprehension, and an f-string. A call of
+a name with a capital first letter is also evident, because that is the
+constructor convention. A None or an Ellipsis initializer states no
+value, so the rule skips it. A lower case call is opaque until the type
+bridge of phase 2 arrives. A module level alias of Any is no loophole.
+A justification comment above the statement covers one declaration.
 See docs/spec/001-overview.md, rule P14.
 """
 
@@ -55,14 +54,13 @@ def _is_evident(value: ast.expr) -> bool:
         return value.value is not None and value.value is not Ellipsis
     if isinstance(value, ast.List | ast.Dict | ast.Set | ast.Tuple | ast.JoinedStr):
         return True
-    # A generator expression is a comprehension, and it gives a
-    # Generator in the same way that a list comprehension gives a list.
+    # A generator expression is a comprehension, and its type is a Generator.
     if isinstance(
         value, ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp
     ):
         return True
     if isinstance(value, ast.UnaryOp):
-        # A sign or a not over a constant keeps the type of the constant.
+        # A unary operator over a constant still gives an evident type.
         return _is_evident(value.operand)
     if isinstance(value, ast.Call):
         name = dotted_name(value.func)

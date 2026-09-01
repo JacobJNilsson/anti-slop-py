@@ -1,9 +1,8 @@
 """Rule P09 justifyexit (AS109).
 
 sys.exit(), os._exit(), and a raised SystemExit outside an entry point
-stop the process of another program. The author states why the process
-cannot continue, in a comment directly above the statement, or raises
-an ordinary exception. See docs/spec/001-overview.md, rule P09.
+stop the process of another program.
+See docs/spec/001-overview.md, rule P09.
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ from antislop.engine import Context
 from antislop.nodes import direct_expressions
 
 MESSAGE = (
-    "this exit stops the process of the caller. State why the process cannot "
+    "the exit stops the process of the caller. State why the process cannot "
     "continue in a comment directly above it, or raise an ordinary exception."
 )
 DEFAULT_ENTRY_DECORATORS = ("click.*", "typer.*", "*.command", "*.group")
@@ -43,7 +42,7 @@ class JustifyExit:
                 yield node, MESSAGE
 
 
-# The settings hold raw pyproject data.
+# The entry-decorator patterns arrive as raw data of pyproject.toml.
 def _entry_decorators(settings: dict[str, object]) -> tuple[str, ...]:
     """Read the decorator patterns that mark an entry point."""
     configured = settings.get("entry-decorators")
@@ -56,7 +55,7 @@ def _exit_names(tree: ast.Module) -> tuple[dict[str, str], set[str]]:
     """Collect the local names that mean an exit call.
 
     The first result maps a local module name to sys or os. The second
-    holds the local names bound by a from-import of an exit function.
+    holds the local names that a from-import of an exit function binds.
     """
     modules: dict[str, str] = {}
     exits: set[str] = set()

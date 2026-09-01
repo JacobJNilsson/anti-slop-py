@@ -1,10 +1,7 @@
 """Rule P03 noanyparam (AS103).
 
-An Any parameter moves the parse from the boundary into the callee. An
-object parameter forces an isinstance in the callee for the same
-reason, so the rule treats both as one absence of a contract. TypeVars
-and Protocols carry evidence and never match. A lambda takes no
-annotation, so the rule reads functions and methods only.
+An Any parameter moves the parse from the boundary into the callee. A
+lambda takes no annotation, so the rule reads functions and methods only.
 
 The one exemption is the decorator idiom. The spec names the pair. A
 function that takes *args and **kwargs, and hands both to exactly one
@@ -12,9 +9,8 @@ callee, is a pass through and not a contract. The exemption then
 covers the two parameters together. A function that takes only one of
 the pair states a contract, and the rule reports it.
 
-A module level alias of Any is no loophole, but a cross module alias
-is out of scope for phase 1. A comment above the definition names the
-API that fixes the signature. The rule ships off.
+A module level alias of Any is no loophole. A comment above the
+definition names the API that fixes the signature. The rule ships off.
 See docs/spec/001-overview.md, rule P03.
 """
 

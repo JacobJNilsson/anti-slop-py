@@ -41,8 +41,7 @@ class CommentIndex:
     """Answers, for one file, where own-line comments and noqa tags sit."""
 
     own_line: frozenset[int]
-    # The noqa field maps a line to the codes it suppresses. An empty
-    # set is a blanket suppression and covers every code on that line.
+    # An empty set is a blanket suppression and covers every code on that line.
     noqa: dict[int, frozenset[str]] = field(default_factory=dict)
     # The logical field maps a physical line to every physical line of
     # the same logical line.
@@ -76,7 +75,7 @@ def index_comments(source: str) -> CommentIndex:
         tokens = list(tokenize.generate_tokens(reader))
     except tokenize.TokenError:
         # The engine only reaches this point for files that parse, so
-        # a tokenize failure is unexpected. Fail open with no comments.
+        # a tokenize failure is unexpected.
         return CommentIndex(own_line=frozenset())
     for token in tokens:
         if token.type != tokenize.COMMENT:

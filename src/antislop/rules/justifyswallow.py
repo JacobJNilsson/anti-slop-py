@@ -1,9 +1,9 @@
 """Rule P10 justifyswallow (AS110).
 
 An except handler that swallows hides a failure and returns a guess.
-The author states why ignoring the error is correct, in a comment
-directly above the handler or first in its body. The rule fires on any
-exception type. See docs/spec/001-overview.md, rule P10.
+The author states why ignoring the error is correct, in a justification
+comment directly above the handler or first in its body.
+See docs/spec/001-overview.md, rule P10.
 """
 
 from __future__ import annotations

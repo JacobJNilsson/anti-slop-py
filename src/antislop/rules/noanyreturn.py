@@ -3,9 +3,9 @@
 A declared Any or object return forces every caller to guess. The
 author returns the concrete type, a Protocol that the caller consumes,
 or a TypeVar. A module level alias of Any hides the same absence, so
-the rule resolves aliases of the same file. A cross module alias is out
-of scope for phase 1. A comment above the definition justifies one
-return. See docs/spec/001-overview.md, rule P04.
+the rule resolves aliases of the same file. A justification comment
+above the definition covers one return.
+See docs/spec/001-overview.md, rule P04.
 """
 
 from __future__ import annotations

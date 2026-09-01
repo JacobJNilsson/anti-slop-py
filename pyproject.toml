@@ -1,7 +1,7 @@
 [project]
 name = "antislop"
 version = "0.1.0"
-description = "Evidence rules for Python. A linter for the moves AI code generators make when they do not know an invariant."
+description = "Evidence rules for Python. A linter for the patterns AI code generators produce when they do not know an invariant."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

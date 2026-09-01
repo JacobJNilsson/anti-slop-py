@@ -2,10 +2,8 @@
 
 Dynamic reflection erases every static guarantee. The rule flags
 getattr, setattr, and delattr with a computed name, vars() calls,
-globals() subscripts, and writes to __dict__. Serialization and plugin
-modules need these tools, so the boundary-modules setting exempts
-them. The constant-name forms stay with ruff B009 and B010, and eval
-and exec stay with bandit. See docs/spec/001-overview.md, rule P07.
+globals() subscripts, and writes to __dict__.
+See docs/spec/001-overview.md, rule P07.
 """
 
 from __future__ import annotations

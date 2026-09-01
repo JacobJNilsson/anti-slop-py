@@ -2,9 +2,9 @@
 
 Status: accepted, 2026-09-01.
 
-The work on phase 1 found gaps in `docs/spec/001-overview.md`. The spec
-owner made each amendment below. This record lists them with one reason
-each, so a reader knows why the spec moved after the review.
+The work on phase 1 found gaps in `docs/spec/001-overview.md`. This
+record lists them with one reason each, so a reader knows why the spec
+changed during phase 1.
 
 - **P02, P04, and P14 received an escape.** An external API fixes some
   signatures, and the author needs a way to state that fact.

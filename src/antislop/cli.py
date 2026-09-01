@@ -4,10 +4,10 @@ The command reads the files that the caller names and prints what the
 enabled rules find. It loads the configuration from the first path
 only, so one call covers one project.
 
-The exit code is 0 for a clean run and 1 for a finding. A mistake of
-the caller gives 2. A path that does not exist and a file that the
-command cannot read are both such mistakes, so CI tells a broken call
-from a lint failure.
+The exit code is 0 for a clean run and 1 for a report. A mistake of the
+caller gives 2. A path that does not exist and a file that the command
+cannot read are both such mistakes. CI can then tell a broken call from
+a lint failure.
 """
 
 from __future__ import annotations
@@ -73,12 +73,10 @@ def run(paths: list[Path]) -> tuple[list[Diagnostic], list[Path]]:
 def read_source(file: Path) -> str | None:
     """Return the text of one file, and None if the read fails."""
     try:
-        # An editor may write a byte order mark. The utf-8-sig codec
-        # drops it, and the parser then reads a valid file.
+        # An editor may write a byte order mark. The utf-8-sig codec drops it.
         return file.read_text(encoding="utf-8-sig", errors="replace")
     except OSError:
-        # A permission error or a vanished file is a mistake of the
-        # caller. The command reports the path and stops with code 2.
+        # A permission error or a vanished file is a mistake of the caller.
         return None
 
 
@@ -91,8 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     paths = arguments.paths or [Path.cwd()]
     missing = [path for path in paths if not path.exists()]
     if missing:
-        # A path that does not exist is a mistake of the caller. A
-        # silent pass would hide it from a hook and from CI.
+        # A silent pass would hide a bad path from a hook and from CI.
         for path in missing:
             print(f"antislop: {path}: no such file or directory", file=sys.stderr)
         return 2

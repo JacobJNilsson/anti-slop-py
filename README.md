@@ -1,7 +1,7 @@
 # antislop
 
-Evidence rules for Python. The linter targets the moves AI code
-generators make when they do not know an invariant. It finds silent
+Evidence rules for Python. The linter targets the patterns AI code
+generators produce when they do not know an invariant. It finds silent
 except handlers, casts without a stated reason, `Any` where a domain
 type exists, and guards against the type system.
 
@@ -15,7 +15,7 @@ The rule catalogue and the philosophy live in
 uv run antislop src/
 ```
 
-A finding names a file, a line, a rule code, and the fix:
+A report names a file, a line, a column, a rule code, and the fix:
 
 ```
 src/app.py:41:8: AS110 justifyswallow: the except handler discards the error. ...

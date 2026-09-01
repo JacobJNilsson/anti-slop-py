@@ -6,7 +6,6 @@ flags a chain with two or more isinstance tests on one value. The value
 is a name or an attribute path, because dispatch on node.value is a
 common shape. The report sits on the first branch that tests
 isinstance. A match statement is the fix, so the rule leaves it alone.
-The boundary-modules setting exempts a decode module.
 See docs/spec/001-overview.md, P06.
 """
 
@@ -21,7 +20,7 @@ from antislop.engine import Context
 
 MESSAGE = (
     "the if chain dispatches on isinstance twice for one value. Branch on a "
-    "domain value, a match on a sealed union, or functools.singledispatch."
+    "domain value, match a sealed union, or use functools.singledispatch."
 )
 
 

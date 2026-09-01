@@ -1,10 +1,8 @@
 """Rule P12 fullobjectcomp (AS112).
 
 A test that asserts attribute after attribute of one object states no
-claim about the rest of the value. The test must compare the whole
-object against an expected instance. The rule counts the per-attribute
-assertions on one subject in one function and reports above a
-threshold. Test files only. See docs/spec/001-overview.md, rule P12.
+claim about the rest of the value.
+See docs/spec/001-overview.md, rule P12.
 
 The subject of one assertion is the dotted path without the final
 attribute. An assert of `order.buyer.name` counts on the subject
@@ -53,7 +51,7 @@ class FullObjectComp:
                     yield group[0], MESSAGE
 
 
-# The settings hold raw pyproject data.
+# The threshold arrives as raw data of pyproject.toml.
 def _threshold(settings: dict[str, object]) -> int:
     """Read the count of per-attribute assertions at which the rule reports."""
     configured = settings.get("threshold")

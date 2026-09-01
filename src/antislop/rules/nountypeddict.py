@@ -6,9 +6,8 @@ with Any or object values, and a Mapping with such values. A generic
 that holds such a dict carries the same absence, so the rule reads the
 arguments of a subscript. A module level alias of such a type is the
 same absence of information, so the rule resolves aliases of the same
-file. A cross module alias is out of scope for phase 1. The
-boundary-modules setting exempts whole files that decode raw data. A
-comment above the definition justifies one signature.
+file. The boundary-modules setting exempts whole files that decode raw
+data. A justification comment above the definition covers one signature.
 See docs/spec/001-overview.md, rule P02.
 """
 

@@ -2,7 +2,7 @@
 
 The engine parses one file once, builds the comment index once, and
 hands both to every enabled rule through a Context. A rule yields
-diagnostics and touches no file itself.
+reports and touches no file itself.
 """
 
 from __future__ import annotations
@@ -79,7 +79,7 @@ def check_source(
     rules: Sequence[Rule],
     settings: dict[str, dict[str, object]],
 ) -> list[Diagnostic]:
-    """Run every rule over one file and return the kept diagnostics."""
+    """Run every rule over one file and return the kept reports."""
     try:
         tree = ast.parse(source)
     except SyntaxError:

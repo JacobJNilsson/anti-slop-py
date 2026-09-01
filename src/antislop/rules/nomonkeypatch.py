@@ -1,12 +1,8 @@
 """Rule P08 nomonkeypatch (AS108).
 
 Production code must not assign attributes onto an imported module,
-class, or object. The mutation is invisible at the call site and it
-depends on the import order. The rule reads the imports of the file to
-know the names. A test file is exempt, because mock.patch and pytest
-monkeypatch restore the state. A compatibility shim for a known
-upstream bug earns a justification comment directly above the
-statement. See docs/spec/001-overview.md, rule P08.
+class, or object. The rule reads the imports of the file to know the
+names. See docs/spec/001-overview.md, rule P08.
 """
 
 from __future__ import annotations
