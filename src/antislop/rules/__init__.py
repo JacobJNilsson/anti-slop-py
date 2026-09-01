@@ -7,6 +7,7 @@ read this list and nothing else.
 from __future__ import annotations
 
 from antislop.engine import Rule
+from antislop.rules.errsemantics import ErrSemantics
 from antislop.rules.fullobjectcomp import FullObjectComp
 from antislop.rules.justifycast import JustifyCast
 from antislop.rules.justifyexit import JustifyExit
@@ -21,6 +22,7 @@ from antislop.rules.noreflection import NoReflection
 from antislop.rules.nountypeddict import NoUntypedDict
 
 ALL_RULES: list[Rule] = [
+    ErrSemantics(),
     FullObjectComp(),
     JustifyCast(),
     JustifyExit(),
