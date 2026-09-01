@@ -1,0 +1,49 @@
+# antislop
+
+Evidence rules for Python. The linter targets the patterns AI
+agents produce when they do not know an invariant. It finds silent
+except handlers, casts without a stated reason, `Any` where a domain
+type exists, and guards against the type system.
+
+Sibling of [anti-slop-go](https://github.com/JacobJNilsson/anti-slop-go).
+The rule catalogue and the philosophy live in
+[docs/spec/001-overview.md](docs/spec/001-overview.md).
+
+## Use
+
+```sh
+uv run antislop src/
+```
+
+A report names a file, a line, a column, a rule code, and the fix:
+
+```
+src/app.py:41:8: AS110 justifyswallow: the except handler discards the error. ...
+```
+
+Configure rules in `pyproject.toml` under `[tool.antislop]`. The
+command reads the configuration from the first path of the call only,
+so one call covers one project.
+
+### pre-commit
+
+Name this repository in `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/JacobJNilsson/anti-slop-py
+    rev: v0.1.0
+    hooks:
+      - id: antislop
+```
+
+The hook runs the linter over the staged Python files.
+
+## Development
+
+```sh
+uv sync
+uv run pytest
+uv run ruff check .
+uv run mypy
+```
